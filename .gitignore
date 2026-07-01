@@ -1,0 +1,36 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Virtual envs ---
+.venv/
+venv/
+env/
+
+# --- Secrets / local config ---
+.env
+*.local
+
+# --- Runtime data (vector DB, checkpoints, uploads) ---
+.data/
+*.sqlite
+*.sqlite3
+chroma/
+
+# --- User-uploaded fitness files (keep samples, ignore real data) ---
+**/uploads/
+!**/sample_*/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

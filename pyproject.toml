@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "north-star"
+version = "0.1.0"
+description = "North Star (Polaris) submission — offline-first, local-LLM agents for studying and fitness, built on LangGraph + Ollama."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Matt" }]
+
+# ---------------------------------------------------------------------------
+# Core runtime dependencies (shared by every component).
+# Versions are floored, not pinned, so `pip install -e .` resolves a coherent
+# set; pin exact versions in requirements.lock for reproducible builds.
+# ---------------------------------------------------------------------------
+dependencies = [
+    # --- Agent orchestration ---
+    "langgraph>=0.2.60",
+    "langgraph-checkpoint-sqlite>=2.0.0",
+    "langchain-core>=0.3.30",
+    "langchain-ollama>=0.2.2",
+    "langchain-community>=0.3.14",
+    "langchain-text-splitters>=0.3.5",
+
+    # --- Vector store (local, embedded, offline) ---
+    "langchain-chroma>=0.1.4",
+    "chromadb>=0.5.20",
+
+    # --- Config / models / runtime ---
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "python-dotenv>=1.0",
+    "typer>=0.15",
+    "rich>=13.9",
+    "httpx>=0.27",
+
+    # --- Document ingestion (RAG loaders) ---
+    "pypdf>=5.1",
+    "docx2txt>=0.8",
+    "python-pptx>=1.0",
+
+    # --- Fitness file parsing + analysis ---
+    "fitparse>=1.2.0",
+    "gpxpy>=1.6.2",
+    "pandas>=2.2",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+# Heavier, fully-offline embedding fallback (ONNX, no model download needed).
+offline-embeddings = ["fastembed>=0.4.2"]
+# FastAPI service layer for exposing the graphs over HTTP.
+serve = ["fastapi>=0.115", "uvicorn[standard]>=0.32"]
+# Streamlit web UI.
+ui = ["streamlit>=1.40"]
+# Dev tooling.
+dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8", "mypy>=1.13"]
+
+# ---------------------------------------------------------------------------
+# Console entry points — installed onto PATH inside the venv.
+# ---------------------------------------------------------------------------
+[project.scripts]
+polaris = "polaris_cli.main:app"
+polaris-study = "study_llm.cli:app"
+polaris-rag = "study_rag.cli:app"
+polaris-fitness = "fitness_agents.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["packages"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Typer uses function calls (typer.Argument/Option) as parameter defaults by design.
+"**/cli.py" = ["B008"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+# Add `asyncio_mode = "auto"` once async tests + the dev extra (pytest-asyncio) are in use.

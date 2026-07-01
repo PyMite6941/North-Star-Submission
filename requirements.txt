@@ -1,0 +1,9 @@
+# Convenience installer for the whole monorepo.
+#   python -m venv .venv
+#   .venv\Scripts\activate          (Windows)   |   source .venv/bin/activate (POSIX)
+#   pip install -r requirements.txt
+#
+# This installs the project (and all packages under packages/) in editable mode
+# together with its declared dependencies. For optional extras:
+#   pip install -e ".[dev,serve,offline-embeddings]"
+-e .
