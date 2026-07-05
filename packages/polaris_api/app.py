@@ -67,6 +67,17 @@ def study_quiz(req: QuizRequest) -> dict:
     return generate_quiz(req.topic, count=req.count, difficulty=req.difficulty).model_dump()
 
 
+class CVRequest(BaseModel):
+    details: str
+
+
+@app.post("/study/cv")
+def study_cv(req: CVRequest) -> dict:
+    from study_llm.cv import generate_resume
+
+    return generate_resume(req.details).model_dump()
+
+
 # ------------------------------------------------------------------------------ rag
 class IngestRequest(BaseModel):
     path: str

@@ -65,6 +65,25 @@ def test_flashcard_export(tmp_path):
     assert rows == [["Q1", "A1"]]
 
 
+def test_resume_markdown_export(tmp_path):
+    """Résumé export writes clean Markdown (no LLM needed)."""
+    from study_llm.cv import ContactInfo, EducationEntry, Resume, export_markdown
+
+    resume = Resume(
+        contact=ContactInfo(name="Jordan Lee", email="jordan@example.com"),
+        summary="Motivated high-school senior interested in CS.",
+        education=[EducationEntry(school="Lincoln High School", credential="GPA 3.9")],
+        skills=["Python", "Public speaking"],
+    )
+    out = export_markdown(resume, tmp_path / "resume.md")
+    text = out.read_text(encoding="utf-8")
+    assert text.startswith("# Jordan Lee")
+    assert "jordan@example.com" in text
+    assert "## Education" in text
+    assert "Lincoln High School" in text
+    assert "Python, Public speaking" in text
+
+
 def test_fitness_agents_present():
     from fitness_agents.agents import list_agents
 
@@ -262,4 +281,4 @@ def test_api_app_has_routes():
     from polaris_api.app import app
 
     paths = {r.path for r in app.routes}
-    assert {"/health", "/study/ask", "/rag/ask", "/fitness/analyze"} <= paths
+    assert {"/health", "/study/ask", "/study/cv", "/rag/ask", "/fitness/analyze"} <= paths
