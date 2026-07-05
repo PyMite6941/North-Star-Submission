@@ -16,8 +16,49 @@ from langchain_core.messages import HumanMessage
 from polaris_core.llm import check_ollama
 from polaris_core.polaris import POLARIS_AREAS, PolarisArea
 
-st.set_page_config(page_title="Polaris", page_icon="⭐", layout="wide")
-st.title("North Star ⭐ (Polaris)")
+st.set_page_config(page_title="Polaris Student", page_icon="⭐", layout="wide")
+
+# --- Brand theme (matched to polarisstudent.com) -----------------------------
+# Plus Jakarta Sans (headings) + Inter (body); firebrick→orange brand gradient on a
+# deep "constellation" navy header. Tokens documented in THEME.md.
+_FONTS = "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"  # noqa: E501
+_LINKS = (
+    '<link rel="preconnect" href="https://fonts.googleapis.com">'
+    f'<link href="{_FONTS}" rel="stylesheet">'
+)
+_STYLE = """
+    <style>
+      :root { --brand:#b22222; --brand-dark:#9b1c1c; --orange:#f97316; }
+      html, body, [class*="css"], .stMarkdown, p, label, input, textarea {
+          font-family: 'Inter', sans-serif;
+      }
+      h1, h2, h3, h4, .stTabs [data-baseweb="tab"] {
+          font-family: 'Plus Jakarta Sans', sans-serif !important;
+          letter-spacing: -0.01em;
+      }
+      .polaris-hero {
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 45%, #0f3460 100%);
+          border-radius: 20px; padding: 26px 30px; margin-bottom: 18px; color: #fff;
+          box-shadow: 0 16px 60px rgba(0,0,0,0.18);
+      }
+      .polaris-hero h1 { margin: 0; font-size: 2.1rem; font-weight: 800; color: #fff; }
+      .polaris-hero .accent {
+          background: linear-gradient(180deg, var(--brand) 0%, var(--orange) 100%);
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      }
+      .polaris-hero p { margin: 6px 0 0; opacity: 0.82; font-size: 1.02rem; }
+      .stButton > button {
+          background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
+          color: #fff; border: 0; border-radius: 10px; font-weight: 600;
+      }
+      .stButton > button:hover { filter: brightness(1.07); color: #fff; }
+    </style>
+    <div class="polaris-hero">
+      <h1>Polaris <span class="accent">Student</span> ⭐</h1>
+      <p>Your academic journey, organized — study &amp; fitness AI that runs on your device.</p>
+    </div>
+"""
+st.markdown(_LINKS + _STYLE, unsafe_allow_html=True)
 
 # --- sidebar: local stack status ---------------------------------------------
 with st.sidebar:

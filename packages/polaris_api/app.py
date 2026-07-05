@@ -6,13 +6,38 @@ identical. This is the backbone for a web UI, the iOS thin-client, and mobile.
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+import tempfile
+from pathlib import Path
+
+from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import HumanMessage
 from polaris_core import __version__
+from polaris_core.config import get_settings
 from polaris_core.llm import check_ollama
 from pydantic import BaseModel
 
 app = FastAPI(title="Polaris API", version=__version__)
+
+# Allowed browser origins come from POLARIS_CORS_ORIGINS (default "*"). Restrict in production.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origin_list(),
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+def _save_uploads(files: list[UploadFile]) -> list[str]:
+    """Persist uploaded files to a temp dir and return their paths."""
+    tmpdir = Path(tempfile.mkdtemp(prefix="polaris_upload_"))
+    paths: list[str] = []
+    for up in files:
+        dest = tmpdir / (up.filename or "upload")
+        dest.write_bytes(up.file.read())
+        paths.append(str(dest))
+    return paths
 
 
 # --------------------------------------------------------------------------- health
@@ -138,3 +163,54 @@ def fitness_trend() -> dict:
 
     trends = compute_trends()
     return trends.__dict__ if trends else {"message": "no history yet"}
+
+
+class ScheduleRequest(BaseModel):
+    goal: str
+    context: str = ""
+
+
+@app.post("/fitness/schedule")
+def fitness_schedule(req: ScheduleRequest) -> dict:
+    from fitness_agents.schedule import generate_schedule
+
+    return generate_schedule(req.goal, context=req.context).model_dump()
+
+
+# ------------------------------------------------------------- multipart uploads (web)
+@app.post("/fitness/analyze-upload")
+async def fitness_analyze_upload(
+    files: list[UploadFile] = File(...),
+    goal: str = Form(""),
+    log: bool = Form(False),
+) -> dict:
+    """Analyze uploaded fitness files (browser multipart)."""
+    from fitness_agents.graph import build_graph
+
+    paths = _save_uploads(files)
+    result = build_graph().invoke({"files": paths, "goal": goal})
+    if log:
+        from fitness_agents.history import log_session
+        from fitness_agents.metrics import summarize
+        from fitness_agents.parsers import parse_file
+
+        for p in paths:
+            recs = parse_file(p)
+            dates = [r.timestamp for r in recs if r.timestamp]
+            log_session(summarize(recs), source=Path(p).name, when=dates[0] if dates else None)
+    return {
+        "metrics": result.get("metrics_text", ""),
+        "trend": result.get("trend_text", ""),
+        "analysis": result.get("analysis", ""),
+        "plan": result.get("review") or result.get("plan", ""),
+    }
+
+
+@app.post("/rag/ingest-upload")
+async def rag_ingest_upload(files: list[UploadFile] = File(...)) -> dict:
+    """Ingest uploaded note files (browser multipart)."""
+    from study_rag.ingest import ingest_path
+
+    paths = _save_uploads(files)
+    total = sum(ingest_path(p) for p in paths)
+    return {"chunks_indexed": total, "files": [Path(p).name for p in paths]}

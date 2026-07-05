@@ -13,8 +13,6 @@ from study_rag.store import get_vectorstore
 
 logger = get_logger(__name__)
 
-MAX_ATTEMPTS = 2
-
 
 def retrieve(state: RagState) -> dict:
     """Fetch the top-k chunks for the current question from Chroma."""
@@ -99,6 +97,7 @@ def generate(state: RagState) -> dict:
 # --- conditional edge ---
 def decide_after_grade(state: RagState) -> str:
     """Route to generation if docs are good or we're out of attempts; else rewrite."""
-    if state.get("relevant") or state.get("attempts", 0) >= MAX_ATTEMPTS:
+    max_attempts = get_settings().rag_max_attempts
+    if state.get("relevant") or state.get("attempts", 0) >= max_attempts:
         return "generate"
     return "rewrite_query"

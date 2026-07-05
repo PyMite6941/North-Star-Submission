@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     # --- Vector DB (Chroma) ---
     chroma_dir: str = Field(default=".data/chroma", alias="POLARIS_CHROMA_DIR")
     rag_collection: str = Field(default="study_notes", alias="POLARIS_RAG_COLLECTION")
+    # Collection holding the app's own feature data (syllabus, clubs, decks, …).
+    app_collection: str = Field(default="polaris_app", alias="POLARIS_APP_COLLECTION")
     rag_chunk_size: int = Field(default=1000, alias="POLARIS_RAG_CHUNK_SIZE")
     rag_chunk_overlap: int = Field(default=150, alias="POLARIS_RAG_CHUNK_OVERLAP")
     rag_top_k: int = Field(default=4, alias="POLARIS_RAG_TOP_K")
@@ -58,10 +60,20 @@ class Settings(BaseSettings):
     athlete_max_hr: int | None = Field(default=None, alias="POLARIS_ATHLETE_MAX_HR")
     fitness_db: str = Field(default=".data/fitness.sqlite", alias="POLARIS_FITNESS_DB")
 
+    # --- RAG behaviour ---
+    rag_max_attempts: int = Field(default=2, alias="POLARIS_RAG_MAX_ATTEMPTS")
+
+    # --- API service (used by `polaris serve` / polaris_api) ---
+    api_host: str = Field(default="127.0.0.1", alias="POLARIS_API_HOST")
+    api_port: int = Field(default=8000, alias="POLARIS_API_PORT")
+    # Comma-separated allowed origins for CORS ("*" = any). Restrict in production.
+    cors_origins: str = Field(default="*", alias="POLARIS_CORS_ORIGINS")
+
     # --- Logging ---
     log_level: str = Field(default="INFO", alias="POLARIS_LOG_LEVEL")
 
     # --- Optional cloud fallback (blank = stay fully local) ---
+    allow_cloud: bool = Field(default=False, alias="POLARIS_ALLOW_CLOUD")
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     openrouter_api_key: str = Field(default="", alias="OPENROUTER_API_KEY")
 
@@ -69,6 +81,10 @@ class Settings(BaseSettings):
     @property
     def has_cloud_fallback(self) -> bool:
         return bool(self.groq_api_key or self.openrouter_api_key)
+
+    def cors_origin_list(self) -> list[str]:
+        """CORS origins as a list (['*'] for any)."""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()] or ["*"]
 
     def abspath(self, relative: str) -> Path:
         """Resolve a configured relative path against the repo root and ensure parent dirs."""

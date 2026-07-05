@@ -29,8 +29,10 @@ and avoids every spaced-path import headache on Windows.
 | `embeddings.py` | `get_embeddings()` — Ollama embeddings by default, fastembed (ONNX) fallback. |
 | `memory.py` | LangGraph SQLite checkpointer factory for resumable, persistent runs. |
 | `logging.py` | Rich-backed structured logging configured from `POLARIS_LOG_LEVEL`. |
+| `console.py` | Shared Rich console; forces UTF-8 stdout so Windows (cp1252) never crashes. |
 
-Every component depends only on `polaris_core` — never on each other.
+`llm.py` also resolves a requested model to an installed tag (bare `llama3.2` →
+`llama3.2:3b`). Every component depends only on `polaris_core` — never on each other.
 
 ## Component graphs (LangGraph)
 
@@ -56,6 +58,8 @@ query:  START → retrieve → grade_docs → generate (cited) → END
                               └─ (if weak) → rewrite_query → retrieve
 ```
 Chroma persists to disk (`.data/chroma`), so retrieval works fully offline once ingested.
+Ingestion reads `.md/.txt/.rst/.pdf/.docx/.pptx` and is **incremental**: each file's content
+is hashed, so re-ingesting skips unchanged files and upserts (re-indexes) changed ones.
 
 ### 3. Fitness Agents — `fitness_agents`
 A **pipeline of markdown-defined agents**.
@@ -67,6 +71,23 @@ Agent system prompts are markdown files in `fitness agents for use/agent mds/`, 
 runtime by `agents.py`. Parsers (`parsers.py`) normalize `.fit/.tcx/.gpx/.csv/.json` into a
 common `ActivityRecord` schema; `metrics.py` computes distance/pace/HR-zone/load summaries
 that ground the agents in real numbers.
+
+Two extra fitness modules build on this:
+- `history.py` — a SQLite session store; `compute_trends()` derives CTL/ATL/TSB
+  (fitness/fatigue/form) and PRs, which the analyst node reads for progress context.
+- `schedule.py` — structured-output weekly plan (`WeeklySchedule`) with `.ics` export.
+
+## Interfaces (CLI / API / UI)
+
+The graphs are the single source of truth; every interface is a thin wrapper over them:
+- **`polaris_cli`** — the unified `polaris` command mounts each component's Typer app
+  (`study` / `rag` / `fitness`) plus `doctor`, `version`, `serve`.
+- **`polaris_api`** — a FastAPI app (`[serve]` extra) exposing `/study`, `/rag`, `/fitness`,
+  `/health`. Run with `polaris serve`.
+- **`webui/app.py`** — a Streamlit UI (`[ui]` extra) calling the same package functions.
+
+Because all three call the identical functions, behaviour is consistent across CLI, HTTP,
+and UI.
 
 ## Data flow & persistence
 
