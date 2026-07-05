@@ -76,8 +76,93 @@ export interface Schedule {
   workouts: Workout[];
 }
 
+// ---- Student-life feature types ----
+export interface Course {
+  name: string;
+  code?: string | null;
+  instructor?: string | null;
+}
+export interface Assignment {
+  title: string;
+  type: string;
+  due_date?: string | null;
+  weight_pct?: number | null;
+  course?: string;
+}
+export interface WeekLoad {
+  week_start: string;
+  score: number;
+  heavy: boolean;
+  count: number;
+}
+export interface StudyBlock {
+  day: string;
+  task: string;
+  minutes: number;
+}
+export interface WeeklyStudyPlan {
+  focus: string;
+  blocks: StudyBlock[];
+}
+export interface FocusStats {
+  sessions: number;
+  total_minutes: number;
+  today_minutes: number;
+  streak_days: number;
+}
+export interface Club {
+  id: string;
+  name: string;
+  category?: string;
+  description?: string;
+  members?: number;
+}
+export interface RecallDeck {
+  id: string;
+  name: string;
+  description?: string;
+  cards?: number;
+  due?: number;
+}
+export interface Card {
+  id: string;
+  question: string;
+  answer: string;
+  due?: string;
+}
+
 export const api = {
   health: () => jget<Health>("/health"),
+
+  // --- syllabus ---
+  syllabusImport: (files: File[]) => upload<Record<string, unknown>>("/syllabus/import-upload", files),
+  syllabusImportText: (text: string) => jpost<Record<string, unknown>>("/syllabus/import-text", { text }),
+  courses: () => jget<Course[]>("/syllabus/courses"),
+  assignments: () => jget<Assignment[]>("/syllabus/assignments"),
+
+  // --- planner ---
+  workload: () => jget<WeekLoad[]>("/planner/workload"),
+  weeklyPlan: (hours: number) => jpost<WeeklyStudyPlan>("/planner/week", { study_hours_per_day: hours }),
+
+  // --- pomodoro ---
+  logPomodoro: (minutes: number, task: string) => jpost<FocusStats>("/pomodoro/session", { minutes, task }),
+  focusStats: () => jget<FocusStats>("/pomodoro/stats"),
+
+  // --- clubs ---
+  clubs: (q?: string) => jget<Club[]>(`/clubs${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  joinClub: (id: string) => jpost<Club>(`/clubs/${encodeURIComponent(id)}/join`, {}),
+
+  // --- recall ---
+  decks: () => jget<RecallDeck[]>("/recall/decks"),
+  createDeck: (name: string, topic?: string, count = 10) =>
+    jpost<RecallDeck>("/recall/decks", topic ? { name, topic, count } : { name }),
+  reviewQueue: (deckId?: string) => jget<Card[]>(`/recall/review${deckId ? `?deck_id=${deckId}` : ""}`),
+  gradeCard: (cardId: string, grade: number) => jpost<Card>(`/recall/review/${cardId}`, { grade }),
+
+  // --- assistant (free-API interpreter over the vector store) ---
+  assistant: (question: string, kinds?: string[]) =>
+    jpost<{ answer: string; used: { kind: string; id: string }[] }>("/assistant/ask", { question, kinds }),
+
   studyAsk: (prompt: string, area?: string) => jpost<AskResult>("/study/ask", { prompt, area: area ?? null }),
   flashcards: (topic: string, count: number) => jpost<Deck>("/study/flashcards", { topic, count }),
   quiz: (topic: string, count: number, difficulty: string) =>

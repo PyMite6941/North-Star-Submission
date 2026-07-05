@@ -2,8 +2,11 @@ import { Link } from "react-router-dom";
 
 const features = [
   { icon: "stack", title: "6 study areas", body: "Flashcards, quizzing, CV builder, advisor, citations, essay help — one local model, routed automatically.", to: "/study" },
-  { icon: "search", title: "Cited notes (RAG)", body: "Upload your notes (PDF/DOCX/PPTX/MD) and get accurate, source-cited answers — fully offline.", to: "/notes" },
-  { icon: "activity", title: "Fitness growth plans", body: "Upload activity files for metrics, HR zones, progress trends, and an AI-built training plan.", to: "/fitness" },
+  { icon: "lightning-charge", title: "Active recall", body: "Free, Quizlet-style spaced repetition (SM-2). AI-generate decks and review exactly what's due.", to: "/recall" },
+  { icon: "calendar-week", title: "Smart planner", body: "Import a syllabus, auto-detect heavy weeks, and get an AI weekly study plan grounded in your deadlines.", to: "/planner" },
+  { icon: "clock-history", title: "Focus timer", body: "Pomodoro sessions that log to a persistent streak so your focus habit sticks.", to: "/pomodoro" },
+  { icon: "people", title: "Club hub", body: "Discover and join clubs with semantic search across interests.", to: "/clubs" },
+  { icon: "search", title: "Cited notes (RAG)", body: "Upload notes (PDF/DOCX/PPTX/MD) and get accurate, source-cited answers — fully offline.", to: "/notes" },
 ];
 
 export default function Home() {
