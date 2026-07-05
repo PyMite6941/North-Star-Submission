@@ -8,16 +8,23 @@ fully offline against local Ollama.
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
 import streamlit as st
 from langchain_core.messages import HumanMessage
+from polaris_core.config import get_settings
 from polaris_core.llm import check_ollama
 from polaris_core.polaris import POLARIS_AREAS, PolarisArea
 
 st.set_page_config(page_title="Polaris", page_icon="⭐", layout="wide")
 st.title("North Star ⭐ (Polaris)")
+
+# NOTE: this UI is an admin / site-manager tool for locally testing the stack,
+# not something end users (students) are meant to see — there is no student-
+# facing login here.
+_SECRET_SETTINGS = {"groq_api_key", "openrouter_api_key"}
 
 # --- sidebar: local stack status ---------------------------------------------
 with st.sidebar:
@@ -29,6 +36,33 @@ with st.sidebar:
     else:
         st.error("Ollama not reachable")
         st.caption("Start it with `ollama serve` and pull a model.")
+
+    st.divider()
+    st.header("Admin / testing")
+    settings = get_settings()
+    if settings.has_cloud_fallback:
+        use_cloud = st.toggle(
+            "Use cloud AI fallback",
+            value=settings.allow_cloud_fallback,
+            help=(
+                "A cloud key (Groq/OpenRouter) is configured server-side. Flip this on to "
+                "let this session fail over to it when Ollama is unreachable — the key itself "
+                "is never shown here or handed to students."
+            ),
+        )
+        if use_cloud != settings.allow_cloud_fallback:
+            os.environ["POLARIS_ALLOW_CLOUD_FALLBACK"] = "true" if use_cloud else "false"
+            get_settings.cache_clear()
+            st.rerun()
+    else:
+        st.caption("Cloud AI fallback isn't configured (no GROQ/OPENROUTER key set in `.env`).")
+
+    with st.expander("Resolved settings"):
+        for name, field in type(settings).model_fields.items():
+            value = getattr(settings, name)
+            if name in _SECRET_SETTINGS:
+                value = "***set***" if value else "(not set)"
+            st.text(f"{field.alias or name.upper()} = {value}")
 
 study_tab, rag_tab, fitness_tab = st.tabs(["📚 Study LLM", "🔎 Study RAG", "🏃 Fitness"])
 

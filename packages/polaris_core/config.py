@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,7 +38,9 @@ class Settings(BaseSettings):
     request_timeout: int = Field(default=120, alias="POLARIS_REQUEST_TIMEOUT")
 
     # --- Embeddings backend ---
-    embed_backend: str = Field(default="ollama", alias="POLARIS_EMBED_BACKEND")
+    embed_backend: Literal["ollama", "fastembed"] = Field(
+        default="ollama", alias="POLARIS_EMBED_BACKEND"
+    )
     fastembed_model: str = Field(
         default="BAAI/bge-small-en-v1.5", alias="POLARIS_FASTEMBED_MODEL"
     )
@@ -57,6 +60,7 @@ class Settings(BaseSettings):
     athlete_resting_hr: int | None = Field(default=None, alias="POLARIS_ATHLETE_RESTING_HR")
     athlete_max_hr: int | None = Field(default=None, alias="POLARIS_ATHLETE_MAX_HR")
     fitness_db: str = Field(default=".data/fitness.sqlite", alias="POLARIS_FITNESS_DB")
+    units: Literal["metric", "imperial"] = Field(default="metric", alias="POLARIS_UNITS")
 
     # --- Logging ---
     log_level: str = Field(default="INFO", alias="POLARIS_LOG_LEVEL")
@@ -64,11 +68,25 @@ class Settings(BaseSettings):
     # --- Optional cloud fallback (blank = stay fully local) ---
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     openrouter_api_key: str = Field(default="", alias="OPENROUTER_API_KEY")
+    # Master switch: the admin sets the key above AND flips this on before any
+    # component is allowed to fail over to the cloud when Ollama is unreachable.
+    allow_cloud_fallback: bool = Field(default=False, alias="POLARIS_ALLOW_CLOUD_FALLBACK")
+
+    @field_validator("embed_backend", "units", mode="before")
+    @classmethod
+    def _normalize_choice(cls, v: object) -> object:
+        """Lowercase/trim string choices so ``Fastembed`` and ``fastembed`` both work."""
+        return v.strip().lower() if isinstance(v, str) else v
 
     # ------------------------------------------------------------------ helpers
     @property
     def has_cloud_fallback(self) -> bool:
         return bool(self.groq_api_key or self.openrouter_api_key)
+
+    @property
+    def cloud_fallback_active(self) -> bool:
+        """True only when the admin has both configured a key AND flipped the switch on."""
+        return self.allow_cloud_fallback and self.has_cloud_fallback
 
     def abspath(self, relative: str) -> Path:
         """Resolve a configured relative path against the repo root and ensure parent dirs."""

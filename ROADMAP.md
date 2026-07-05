@@ -37,7 +37,12 @@ Status legend: ✅ done · 🚧 scaffolded (stub logic, ready to flesh out) · �
 - ✅ Model-tag auto-resolution (bare `llama3.2` → installed `llama3.2:3b`)
 - ✅ UTF-8-safe output on Windows (CLIs + runner scripts)
 - ✅ FastAPI service layer (`[serve]` extra) exposing all three graphs
-- ✅ Streamlit web UI (`[ui]` extra) — single front-end for all three
+- ✅ Streamlit web UI (`[ui]` extra) — single front-end for all three, with an admin-only
+  sidebar (resolved settings + a gated cloud-fallback toggle)
+- ✅ `polaris config show` — inspect resolved settings (secrets masked)
+- ✅ Fail-fast settings validation (`POLARIS_EMBED_BACKEND` typos reject at startup)
+- ✅ `POLARIS_UNITS` (metric/imperial) for fitness output
+- ✅ `POLARIS_ALLOW_CLOUD_FALLBACK` admin switch — a configured key alone no longer enables cloud use
 - ✅ GitHub Actions CI (ruff + pytest on 3.11/3.12/3.13)
 - ⬜ Expanded test suite with mocked LLM + Ollama integration tests
 - ⬜ Packaged release artifacts

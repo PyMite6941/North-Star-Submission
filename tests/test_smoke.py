@@ -144,6 +144,116 @@ def test_history_log_and_trends(tmp_path):
         get_settings.cache_clear()
 
 
+def test_invalid_embed_backend_fails_fast():
+    """A typo'd POLARIS_EMBED_BACKEND should raise, not silently fall back to Ollama."""
+    import os
+
+    import pytest
+    from polaris_core.config import get_settings
+    from pydantic import ValidationError
+
+    old = os.environ.get("POLARIS_EMBED_BACKEND")
+    os.environ["POLARIS_EMBED_BACKEND"] = "bogus"
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ValidationError):
+            get_settings()
+    finally:
+        if old is None:
+            os.environ.pop("POLARIS_EMBED_BACKEND", None)
+        else:
+            os.environ["POLARIS_EMBED_BACKEND"] = old
+        get_settings.cache_clear()
+
+
+def test_fitness_units_toggle_imperial():
+    """POLARIS_UNITS=imperial renders miles/mph instead of km/km-h."""
+    import os
+
+    from fitness_agents.metrics import summarize
+    from fitness_agents.parsers import parse_file
+    from polaris_core.config import get_settings
+
+    records = parse_file(REPO / "fitness agents for use" / "sample_data" / "run.csv")
+    summary = summarize(records)
+
+    assert "km" in summary.to_prompt(units="metric")
+    assert "mi" in summary.to_prompt(units="imperial")
+
+    old = os.environ.get("POLARIS_UNITS")
+    os.environ["POLARIS_UNITS"] = "imperial"
+    get_settings.cache_clear()
+    try:
+        assert get_settings().units == "imperial"
+        assert "mi" in summary.to_prompt()
+    finally:
+        if old is None:
+            os.environ.pop("POLARIS_UNITS", None)
+        else:
+            os.environ["POLARIS_UNITS"] = old
+        get_settings.cache_clear()
+
+
+def test_config_show_command():
+    """`polaris config show` prints resolved settings and masks secrets."""
+    from polaris_cli.main import app
+    from typer.testing import CliRunner
+
+    result = CliRunner().invoke(app, ["config", "show"])
+    assert result.exit_code == 0
+    assert "POLARIS_CHAT_MODEL" in result.output
+    assert "GROQ_API_KEY" in result.output
+    assert "not set" in result.output or "***set***" in result.output
+
+
+def test_cloud_fallback_requires_explicit_admin_opt_in():
+    """A configured key alone must not enable cloud use: the admin switch also has to be on."""
+    import os
+
+    from polaris_core.config import get_settings
+
+    settings = get_settings()
+    assert settings.allow_cloud_fallback is False
+    assert settings.cloud_fallback_active is False
+
+    old = os.environ.get("GROQ_API_KEY")
+    os.environ["GROQ_API_KEY"] = "fake-key-for-test"
+    get_settings.cache_clear()
+    try:
+        s = get_settings()
+        assert s.has_cloud_fallback is True
+        assert s.allow_cloud_fallback is False
+        assert s.cloud_fallback_active is False  # key alone is not enough
+    finally:
+        if old is None:
+            os.environ.pop("GROQ_API_KEY", None)
+        else:
+            os.environ["GROQ_API_KEY"] = old
+        get_settings.cache_clear()
+
+
+def test_allow_cloud_fallback_activates_when_both_set():
+    """cloud_fallback_active flips on only once both the key and the admin switch are set."""
+    import os
+
+    from polaris_core.config import get_settings
+
+    old_key = os.environ.get("GROQ_API_KEY")
+    old_switch = os.environ.get("POLARIS_ALLOW_CLOUD_FALLBACK")
+    os.environ["GROQ_API_KEY"] = "fake-key-for-test"
+    os.environ["POLARIS_ALLOW_CLOUD_FALLBACK"] = "true"
+    get_settings.cache_clear()
+    try:
+        assert get_settings().cloud_fallback_active is True
+    finally:
+        for name, old in (("GROQ_API_KEY", old_key), ("POLARIS_ALLOW_CLOUD_FALLBACK", old_switch)):
+            if old is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = old
+        get_settings.cache_clear()
+
+
 def test_api_app_has_routes():
     """FastAPI app exposes the expected endpoints (skips if serve extra absent)."""
     import pytest
