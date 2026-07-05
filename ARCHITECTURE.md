@@ -62,6 +62,12 @@ ingest (offline, one-time):  load → split → embed → Chroma
 query:  START → retrieve → grade_docs → generate (cited) → END
                               └─ (if weak) → rewrite_query → retrieve
 ```
+
+`study_rag` also has `discord_sync.py` — a read-only, one-way pull of a single Discord
+channel's messages (via the official REST API, a scoped bot token) into a Markdown note
+that feeds straight into the same ingest pipeline. Not part of the query graph; it's a
+separate, occasional "add a source" step. See
+[docs/discord-announcements-sync.md](docs/discord-announcements-sync.md).
 Chroma persists to disk (`.data/chroma`), so retrieval works fully offline once ingested.
 
 ### 3. Fitness Agents — `fitness_agents`
@@ -109,3 +115,7 @@ component depending only on `polaris_core`.
   can fall back to a hosted free model when Ollama is unreachable. Default is **local-only**.
 - All config is typed and validated at startup (pydantic), so misconfiguration fails fast
   with a clear message rather than deep in a graph run.
+- `POLARIS_LOW_POWER` / `POLARIS_SAVE_MEMORY` (`polaris_core/llm.py`'s
+  `_effective_model_and_options`) trade quality for less CPU/battery/RAM on constrained
+  devices: low power swaps in a smaller chat model, save memory shrinks the context
+  window and caps generated tokens. Both are opt-in and off by default.

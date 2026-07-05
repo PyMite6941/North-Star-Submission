@@ -19,6 +19,46 @@ def test_settings_load():
     assert s.rag_top_k >= 1
 
 
+def test_low_power_and_save_memory_resolve_smaller_footprint():
+    """Low power swaps in a smaller model; save memory shrinks context + output tokens."""
+    import os
+
+    from polaris_core.config import get_settings
+    from polaris_core.llm import _effective_model_and_options
+
+    normal = get_settings()
+    model, num_ctx, num_predict = _effective_model_and_options(normal, None)
+    assert model == normal.chat_model
+    assert num_ctx == normal.num_ctx
+    assert num_predict is None
+
+    old_low_power = os.environ.get("POLARIS_LOW_POWER")
+    old_save_memory = os.environ.get("POLARIS_SAVE_MEMORY")
+    os.environ["POLARIS_LOW_POWER"] = "true"
+    os.environ["POLARIS_SAVE_MEMORY"] = "true"
+    get_settings.cache_clear()
+    try:
+        constrained = get_settings()
+        model, num_ctx, num_predict = _effective_model_and_options(constrained, None)
+        assert model == constrained.low_power_chat_model
+        assert num_ctx == constrained.save_memory_num_ctx < normal.num_ctx
+        assert num_predict == constrained.save_memory_max_tokens
+
+        # An explicit model always wins over the low-power default.
+        model, _, _ = _effective_model_and_options(constrained, "custom-model")
+        assert model == "custom-model"
+    finally:
+        for name, old in (
+            ("POLARIS_LOW_POWER", old_low_power),
+            ("POLARIS_SAVE_MEMORY", old_save_memory),
+        ):
+            if old is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = old
+        get_settings.cache_clear()
+
+
 def test_six_polaris_areas():
     from polaris_core.polaris import POLARIS_AREAS, PolarisArea
 
@@ -376,7 +416,38 @@ def test_config_show_command():
     assert result.exit_code == 0
     assert "POLARIS_CHAT_MODEL" in result.output
     assert "GROQ_API_KEY" in result.output
+    assert "DISCORD_BOT_TOKEN" in result.output
     assert "not set" in result.output or "***set***" in result.output
+
+
+def test_discord_sync_markdown_rendering_and_missing_config():
+    """Message rendering is pure/offline; missing token/channel fails fast and clearly."""
+    from study_rag.discord_sync import DiscordSyncError, fetch_channel_messages, to_markdown
+
+    messages = [
+        {
+            "author": {"username": "mods"},
+            "timestamp": "2026-01-01T00:00:00+00:00",
+            "content": "Welcome!",
+        },
+        {
+            "author": {"username": "bot"},
+            "timestamp": "2026-01-02T00:00:00+00:00",
+            "content": "",
+        },
+    ]
+    text = to_markdown(messages, channel_name="announcements")
+    assert text.startswith("# #announcements")
+    assert "mods — 2026-01-01T00:00:00+00:00" in text
+    assert "Welcome!" in text
+    # The empty-content (embed/attachment-only) message contributes no body line.
+    assert "bot — 2026-01-02T00:00:00+00:00" not in text
+
+    try:
+        fetch_channel_messages("", "")
+        raise AssertionError("expected DiscordSyncError for missing config")
+    except DiscordSyncError as exc:
+        assert "bot token" in str(exc)
 
 
 def test_cloud_fallback_requires_explicit_admin_opt_in():

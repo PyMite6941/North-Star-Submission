@@ -5,15 +5,20 @@
     polaris-rag ask "..." --show-sources    # also list the cited chunks
     polaris-rag stats                        # how many chunks are stored
     polaris-rag reset                        # clear the vector DB
+    polaris-rag sync-discord                 # pull #announcements -> local notes -> ingest
     polaris-rag doctor
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
+from polaris_core.config import get_settings
 from polaris_core.console import console
 from polaris_core.llm import check_ollama
 
+from study_rag.discord_sync import DiscordSyncError, sync_channel
 from study_rag.graph import build_graph
 from study_rag.ingest import ingest_path
 from study_rag.store import collection_count, reset_collection
@@ -80,6 +85,40 @@ def reset(
             return
     reset_collection()
     console.print("[green]✓ Collection cleared.[/]")
+
+
+@app.command("sync-discord")
+def sync_discord(
+    export: Path = typer.Option(
+        Path("study local notes with vector db/discord_sync/announcements.md"),
+        "--export",
+        "-e",
+        help="Where to write the synced Markdown note.",
+    ),
+    ingest_after: bool = typer.Option(
+        True, "--ingest/--no-ingest", help="Run `rag ingest` on the synced note afterward."
+    ),
+    limit: int = typer.Option(200, "--limit", help="Max recent messages to fetch."),
+) -> None:
+    """Pull recent messages from the configured Discord announcements channel (read-only,
+    one-way — never posts) into a local Markdown note, then ingest it for offline, cited
+    Q&A. Requires DISCORD_BOT_TOKEN + DISCORD_ANNOUNCEMENTS_CHANNEL_ID — see
+    docs/discord-announcements-sync.md for what has to be set up first."""
+    settings = get_settings()
+    try:
+        path = sync_channel(
+            settings.discord_announcements_channel_id,
+            settings.discord_bot_token,
+            export,
+            limit=limit,
+        )
+    except DiscordSyncError as exc:
+        console.print(f"[red]✗ {exc}[/]")
+        raise typer.Exit(1) from None
+    console.print(f"[green]✓ Synced →[/] {path}")
+    if ingest_after:
+        n = ingest_path(path)
+        console.print(f"[green]✓ Ingested {n} chunks[/] — ask about it with `polaris rag ask`.")
 
 
 @app.command()

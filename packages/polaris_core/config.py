@@ -65,8 +65,24 @@ class Settings(BaseSettings):
     # --- College Planner (application tracker + course map) ---
     college_db: str = Field(default=".data/college.sqlite", alias="POLARIS_COLLEGE_DB")
 
+    # --- Power / memory modes (for constrained devices — old laptops, phones) ---
+    # Low power: trade quality for less CPU/battery use by preferring a smaller model.
+    low_power: bool = Field(default=False, alias="POLARIS_LOW_POWER")
+    low_power_chat_model: str = Field(default="llama3.2:1b", alias="POLARIS_LOW_POWER_CHAT_MODEL")
+    # Save memory: shrink the context window and cap generated tokens to cut RAM use.
+    save_memory: bool = Field(default=False, alias="POLARIS_SAVE_MEMORY")
+    save_memory_num_ctx: int = Field(default=1024, alias="POLARIS_SAVE_MEMORY_NUM_CTX")
+    save_memory_max_tokens: int = Field(default=256, alias="POLARIS_SAVE_MEMORY_MAX_TOKENS")
+
     # --- Logging ---
     log_level: str = Field(default="INFO", alias="POLARIS_LOG_LEVEL")
+
+    # --- Discord announcements sync (optional; read-only, one-way — see
+    # docs/discord-announcements-sync.md for what has to be set up first) ---
+    discord_bot_token: str = Field(default="", alias="DISCORD_BOT_TOKEN")
+    discord_announcements_channel_id: str = Field(
+        default="", alias="DISCORD_ANNOUNCEMENTS_CHANNEL_ID"
+    )
 
     # --- Optional cloud fallback (blank = stay fully local) ---
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")

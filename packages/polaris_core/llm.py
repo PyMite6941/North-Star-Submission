@@ -58,6 +58,22 @@ def check_ollama(settings: Settings | None = None) -> OllamaStatus:
         return OllamaStatus(reachable=False, models=[], detail=str(exc))
 
 
+def _effective_model_and_options(
+    settings: Settings, model: str | None
+) -> tuple[str, int, int | None]:
+    """Resolve (model, num_ctx, num_predict) from the low-power / save-memory settings.
+
+    Pure and Ollama-free so it's unit-testable: low power swaps in a smaller model,
+    save memory shrinks the context window and caps generated tokens — both aimed at
+    constrained devices (old laptops, phones) rather than a beefy desktop.
+    """
+    if model is None:
+        model = settings.low_power_chat_model if settings.low_power else settings.chat_model
+    num_ctx = settings.save_memory_num_ctx if settings.save_memory else settings.num_ctx
+    num_predict = settings.save_memory_max_tokens if settings.save_memory else None
+    return model, num_ctx, num_predict
+
+
 def get_chat_model(
     *,
     settings: Settings | None = None,
@@ -72,9 +88,12 @@ def get_chat_model(
     the OpenAI-compatible API — but only when cloud fallback is actually allowed:
     ``allow_cloud`` if explicitly passed, else the ``POLARIS_ALLOW_CLOUD_FALLBACK``
     admin setting (which itself requires a configured key; see ``Settings.cloud_fallback_active``).
+
+    ``POLARIS_LOW_POWER`` / ``POLARIS_SAVE_MEMORY`` trade quality for less CPU/battery/RAM
+    use on constrained devices — see :func:`_effective_model_and_options`.
     """
     settings = settings or get_settings()
-    model = model or settings.chat_model
+    model, num_ctx, num_predict = _effective_model_and_options(settings, model)
     temperature = settings.temperature if temperature is None else temperature
     allow_cloud = settings.allow_cloud_fallback if allow_cloud is None else allow_cloud
 
@@ -86,14 +105,17 @@ def get_chat_model(
             )
         # Resolve to an installed tag (e.g. llama3.2 -> llama3.2:3b) so the call succeeds.
         model = status.resolve(model)
-        return ChatOllama(
-            model=model,
-            base_url=settings.ollama_base_url,
-            temperature=temperature,
-            num_ctx=settings.num_ctx,
-            client_kwargs={"timeout": settings.request_timeout},
-            **kwargs,
-        )
+        ollama_kwargs: dict = {
+            "model": model,
+            "base_url": settings.ollama_base_url,
+            "temperature": temperature,
+            "num_ctx": num_ctx,
+            "client_kwargs": {"timeout": settings.request_timeout},
+        }
+        if num_predict is not None:
+            ollama_kwargs["num_predict"] = num_predict
+        ollama_kwargs.update(kwargs)
+        return ChatOllama(**ollama_kwargs)
 
     if allow_cloud and settings.has_cloud_fallback:
         logger.warning("Ollama unreachable (%s); falling back to cloud.", status.detail)

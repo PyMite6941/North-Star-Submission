@@ -57,10 +57,17 @@ to verify the scaffolding:
 - One-command installers for Windows, macOS/Linux, Android (Termux), and a native iOS
   package (Apple Foundation Models) — see [`install/`](install/) and
   [`ios-native/`](ios-native).
-- 24 automated tests (`pytest`, CI on 3.11/3.12/3.13 — see
+- 26 automated tests (`pytest`, CI on 3.11/3.12/3.13 — see
   [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) covering config, the 6 areas,
   file parsing, exports, Study Packs, and College Planner storage — none require a live
   model.
+- `POLARIS_LOW_POWER` / `POLARIS_SAVE_MEMORY` — opt-in settings that swap to a smaller
+  model and/or shrink the context window and generated-token cap, for the student running
+  this on an older laptop or a phone rather than a beefy desktop.
+- Even community content stays offline-first: `polaris rag sync-discord` pulls the
+  official Polaris Student announcements channel into Study RAG as a one-way, read-only
+  snapshot (no live embed, no persistent connection) — see
+  [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md).
 - Every export is a format usable with or without North Star installed on the other end:
   flashcards → Anki `.apkg` or CSV
   ([`flashcards.py`](packages/study_llm/flashcards.py)), a résumé → PDF or Markdown

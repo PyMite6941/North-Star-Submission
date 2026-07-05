@@ -25,7 +25,7 @@ app.add_typer(fitness_app, name="fitness", help="Fitness file analysis + growth 
 app.add_typer(college_app, name="college", help="College-application tracker + course map.")
 app.add_typer(config_app, name="config", help="Inspect the resolved configuration.")
 
-_SECRET_FIELDS = {"groq_api_key", "openrouter_api_key"}
+_SECRET_FIELDS = {"groq_api_key", "openrouter_api_key", "discord_bot_token"}
 
 
 @config_app.command("show")

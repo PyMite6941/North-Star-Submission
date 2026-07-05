@@ -130,6 +130,7 @@ polaris rag ingest "study local notes with vector db/sample_notes"
 polaris rag ask "Explain the light-dependent reactions." --show-sources
 polaris rag stats                                    # chunks stored
 polaris rag reset                                    # clear the vector DB
+polaris rag sync-discord                             # optional: see docs/discord-announcements-sync.md
 
 # Fitness agents
 polaris fitness parse activity.gpx                   # metrics incl. HR zones + training load
@@ -206,6 +207,7 @@ North Star Submission/
 | [ROADMAP.md](ROADMAP.md) | Status of each component and what's next. |
 | [install/README.md](install/README.md) | Per-platform install + the support matrix. |
 | [ios-native/README.md](ios-native/README.md) | On-device iOS via Foundation Models (+ MLX / MLC / llama.cpp options). |
+| [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md) | Pull the official Polaris Student `#announcements` channel into Study RAG — read-only, one-way, and exactly what has to be set up on the Discord side first. |
 
 ## Status
 

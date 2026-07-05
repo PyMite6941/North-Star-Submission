@@ -2,6 +2,21 @@
 
 Status legend: ✅ done · 🚧 scaffolded (stub logic, ready to flesh out) · ⬜ planned
 
+## On-device LLM everywhere + power modes + Discord sync
+
+- ✅ Global `POLARIS_LOW_POWER` / `POLARIS_SAVE_MEMORY` settings — swap to a smaller model
+  and/or shrink the context window + capped output tokens on constrained devices
+- ⬜ `android-native/` — on-device Android package (MediaPipe LLM Inference, mirrors
+  `ios-native/`'s role), with its own low-power/save-memory config
+- ⬜ CI builds `android-native/` (Gradle) and `ios-native/` (Swift) alongside the Python
+  ruff+pytest matrix, so a broken mobile build fails the same way a broken Python change
+  does
+- ✅ **Discord announcements sync** — read-only, one-way pull of the official Polaris
+  Student `#announcements` channel into Study RAG (`polaris rag sync-discord`); see
+  [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md) for the
+  (Discord-side, admin-only) setup this depends on
+- ⬜ On-device RAG for Android (mirrors the iOS roadmap item below)
+
 ## Group study + college planning + portable exports
 
 Ties directly to the Access & Equity pitch in [SUBMISSION.md](SUBMISSION.md): a group of
