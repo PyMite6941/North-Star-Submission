@@ -11,7 +11,8 @@ runs where.
 | **Windows** | ✅ full | `install\install.ps1` | Auto-installs Python + Ollama via winget if missing. |
 | **macOS** | ✅ full | `install/install.sh` | Apple Silicon runs local models very well. |
 | **Linux** | ✅ full | `install/install.sh` | Uses the official Ollama install script. |
-| **Android** | ⚠️ limited | `install/android-termux.sh` | Via **Termux**; small models only (RAM/CPU limited). |
+| **Android** (native) | ✅ on-device, high-end only | [`android-native/`](../android-native) | Runs on-device via MediaPipe LLM Inference — per Google's docs, optimized for high-end devices (Pixel 8 / Galaxy S23-class+), not reliable on emulators. |
+| **Android** (Termux) | ⚠️ limited | `install/android-termux.sh` | Broader hardware support than the native path; small models only (RAM/CPU limited). |
 | **iOS / iPadOS** (native) | ✅ on-device | [`ios-native/`](../ios-native) | **Recommended.** Runs on-device via Apple Foundation Models (iOS 26+). No Ollama needed. |
 | **iOS / iPadOS** (scripted) | ❌ not on-device | `install/ios-setup.sh` | Fallback: Python sandbox blocks Ollama, so it runs as a **thin client** (LAN or cloud). |
 
@@ -21,6 +22,13 @@ Legend: ✅ full local LLM · ⚠️ works but constrained · ❌ no on-device d
 > on-device path is the native Swift package in [`ios-native/`](../ios-native), which uses
 > Apple's Foundation Models framework. The `ios-setup.sh` script below is the no-native-build
 > fallback (thin client to a desktop or the cloud).
+
+> **Android note:** unlike iOS 26+, there's no system-provided model, so the native path
+> in [`android-native/`](../android-native) bundles a small model file instead — and per
+> Google's own docs it's tuned for recent high-end hardware. On a budget/older phone,
+> Termux (broader hardware support, smaller models) is the more realistic path; either way,
+> set `POLARIS_LOW_POWER=true` / `POLARIS_SAVE_MEMORY=true` (Termux) or `PowerMode.SAVE_MEMORY`
+> (native) to push a struggling device further.
 
 ---
 
@@ -48,7 +56,18 @@ source .venv/bin/activate
 polaris-study doctor
 ```
 
-## Android (Termux)
+## Android
+
+### Recommended (high-end devices): native on-device (`android-native/`)
+
+The Kotlin package in [`android-native/`](../android-native) runs a small quantized model
+(Gemma 3 1B) entirely on-device via MediaPipe's LLM Inference API — no Ollama, no network.
+Per Google's own docs it's tuned for recent high-end hardware (Pixel 8 / Galaxy S23-class
+or newer) and isn't reliable on emulators. See that package's README for the full
+device-support trade-offs, the model-file setup (`adb push`), and `PowerMode` for tuning it
+down on a device that still struggles.
+
+### Broader hardware support: Termux
 
 Install **Termux from F-Droid** (the Play Store build is outdated). Then:
 
@@ -63,7 +82,8 @@ bash install/android-termux.sh
 - If `chromadb`/`onnxruntime` won't build on your device, the script falls back to a
   **lite install** (study-LLM + fitness components). The RAG component needs `chromadb`;
   on unsupported devices, run RAG against a desktop instead (set `OLLAMA_BASE_URL`).
-- Keep other apps closed while a model runs.
+- Keep other apps closed while a model runs. On a low-RAM phone, also set
+  `POLARIS_LOW_POWER=true` and `POLARIS_SAVE_MEMORY=true` in `.env`.
 
 ## iOS / iPadOS
 

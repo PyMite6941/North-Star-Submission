@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 // PolarisStudyKit — on-device implementation of the 6 Polaris areas for iOS/iPadOS/macOS

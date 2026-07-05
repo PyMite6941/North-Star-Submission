@@ -42,6 +42,10 @@ dependencies = [
     "docx2txt>=0.8",
     "python-pptx>=1.0",
 
+    # --- Portable exports (flashcards -> Anki, résumé -> PDF) ---
+    "genanki>=0.13",
+    "fpdf2>=2.7",
+
     # --- Fitness file parsing + analysis ---
     "fitparse>=1.2.0",
     "gpxpy>=1.6.2",
@@ -67,6 +71,7 @@ polaris = "polaris_cli.main:app"
 polaris-study = "study_llm.cli:app"
 polaris-rag = "study_rag.cli:app"
 polaris-fitness = "fitness_agents.cli:app"
+polaris-college = "college_planner.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["packages"]

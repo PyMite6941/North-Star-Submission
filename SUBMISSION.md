@@ -25,38 +25,58 @@ Equity track calls out.
 
 ## The solution, and why a student team can actually build & run it
 
-North Star (Polaris) is three small, offline AI helpers that run entirely on a student's
+North Star (Polaris) is four small, offline helpers that run entirely on a student's
 own device through [Ollama](https://ollama.com) — no account, no API key, no internet
 after setup:
 
 1. **Study LLM** — the 6 areas: Flashcard Creation, Quizzing, CV Builder, Advisor, Citation
-   Generator, Essay Helper. One local model, routed by a small LangGraph classifier.
+   Generator, Essay Helper. One local model, routed by a small LangGraph classifier. Also
+   includes **Study Packs** (bundle decks into one portable file for a group to share with
+   no server) and **Group Quiz** (pass-the-device multiplayer with a leaderboard) — built
+   for a study group in one room with no internet and often one shared device.
 2. **Study RAG** — point it at your own notes folder; it answers questions from *your*
    material with cited sources, entirely from a local vector DB (Chroma) — no upload, no
    cloud retrieval.
 3. **Fitness Agents** — a bonus component (progress tracking / growth plans from workout
    files), included because "Wellbeing & Motivation" and "Learning & Focus" both touch the
    same student, but not the focus of this track entry.
+4. **College Planner** — an offline college-application tracker (deadlines, status, notes)
+   and a 4-year course/credit map, in a local file — the exact "Course Map" / "College
+   List" job a cloud platform does, done with no account and no connectivity required.
 
 It's feasible for a solo student build because every piece is a thin, well-scoped layer
 over existing free tools (Ollama for the model, LangGraph for orchestration, Chroma for
-retrieval) rather than new infrastructure — see [ARCHITECTURE.md](ARCHITECTURE.md).
+retrieval, plain SQLite for local records) rather than new infrastructure — see
+[ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Traction / evidence it works
 
 This isn't a slide — it's a working prototype with tests that don't need a model running
 to verify the scaffolding:
 
-- One-command installers for Windows, macOS/Linux, Android (Termux), and a native iOS
-  package (Apple Foundation Models) — see [`install/`](install/) and
-  [`ios-native/`](ios-native).
-- 20 automated tests (`pytest`, CI on 3.11/3.12/3.13 — see
+- One-command installers for Windows, macOS/Linux, Android (Termux), and native on-device
+  packages for both iOS (Apple Foundation Models) and Android (MediaPipe LLM Inference) —
+  see [`install/`](install/), [`ios-native/`](ios-native), [`android-native/`](android-native).
+- CI doesn't stop at Python: `.github/workflows/ci.yml` also builds `android-native/`
+  (Gradle) and `ios-native/` (Swift) on every push/PR, so the on-device mobile packages are
+  held to the same "does it actually build" bar as everything else.
+- 26 automated tests (`pytest`, CI on 3.11/3.12/3.13 — see
   [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) covering config, the 6 areas,
-  file parsing, exports, and the API surface — none require a live model.
-- Structured, exportable output, not just chat text: flashcards → Anki-importable CSV,
-  quizzes → interactively graded with feedback, and (new in this round) a **CV Builder**
-  that produces a typed résumé (contact/summary/experience/education/skills/projects) and
-  exports clean Markdown — see [`packages/study_llm/cv.py`](packages/study_llm/cv.py).
+  file parsing, exports, Study Packs, and College Planner storage — none require a live
+  model.
+- `POLARIS_LOW_POWER` / `POLARIS_SAVE_MEMORY` — opt-in settings that swap to a smaller
+  model and/or shrink the context window and generated-token cap, for the student running
+  this on an older laptop or a phone rather than a beefy desktop.
+- Even community content stays offline-first: `polaris rag sync-discord` pulls the
+  official Polaris Student announcements channel into Study RAG as a one-way, read-only
+  snapshot (no live embed, no persistent connection) — see
+  [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md).
+- Every export is a format usable with or without North Star installed on the other end:
+  flashcards → Anki `.apkg` or CSV
+  ([`flashcards.py`](packages/study_llm/flashcards.py)), a résumé → PDF or Markdown
+  ([`cv.py`](packages/study_llm/cv.py)), a quiz → a printable Markdown handout
+  ([`quiz.py`](packages/study_llm/quiz.py)), college deadlines → `.ics` for any calendar
+  app ([`calendar_export.py`](packages/college_planner/calendar_export.py)).
 - A Streamlit web UI and a FastAPI service so the same graphs are usable from a browser or
   another app, not just a terminal.
 
@@ -73,8 +93,11 @@ reaches the student a cloud-only tool structurally can't:
   on any Wi-Fi (library, school lab) the student passes through.
 - Complements, rather than competes with, cloud platforms like Polaris Student itself:
   those are excellent for tracking grades/deadlines/college lists across devices, but they
-  assume connectivity. This project is what a student can still fall back on the moment
-  that assumption breaks.
+  assume connectivity. College Planner does the same deadline/course-map job entirely
+  offline, so a student isn't blocked the moment that assumption breaks.
+- Built for groups, not just individuals: Study Packs and Group Quiz assume the realistic
+  case for an under-resourced student — studying with friends off one shared device,
+  because a laptop or data plan per person isn't a given.
 
 ## How we used AI
 

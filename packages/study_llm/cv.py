@@ -2,7 +2,8 @@
 
 Mirrors ``flashcards.py``: uses the LLM's structured-output mode to produce a typed,
 sectioned résumé (not free text), so it renders consistently and exports cleanly to
-Markdown — useful as-is, or as a base to convert to PDF/Word.
+Markdown (to edit further) or PDF (to upload to a college/job portal or print) — no
+North Star install needed on the receiving end either way.
 """
 
 from __future__ import annotations
@@ -134,3 +135,91 @@ def export_markdown(resume: Resume, path: str | Path) -> Path:
     path.write_text(to_markdown(resume), encoding="utf-8")
     logger.info("Exported resume → %s", path)
     return path
+
+
+def _pdf_section(pdf, title: str) -> None:
+    pdf.ln(3)
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.cell(0, 8, title, new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 11)
+
+
+def to_pdf_bytes(resume: Resume) -> bytes:
+    """Render a :class:`Resume` as a one-page-style PDF (bytes) — no extra fonts needed."""
+    from fpdf import FPDF
+
+    pdf = FPDF(format="Letter")
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 10, resume.contact.name or "Résumé", new_x="LMARGIN", new_y="NEXT")
+
+    contact = resume.contact
+    contact_bits = [b for b in (contact.email, contact.phone, contact.location) if b]
+    contact_bits.extend(contact.links)
+    if contact_bits:
+        pdf.set_font("Helvetica", "", 10)
+        pdf.cell(0, 6, " | ".join(contact_bits), new_x="LMARGIN", new_y="NEXT")
+
+    if resume.summary:
+        _pdf_section(pdf, "Summary")
+        pdf.multi_cell(0, 6, resume.summary)
+
+    if resume.experience:
+        _pdf_section(pdf, "Experience")
+        for e in resume.experience:
+            header = f"{e.title}, {e.organization}"
+            if e.dates:
+                header += f" ({e.dates})"
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.multi_cell(0, 6, header)
+            pdf.set_font("Helvetica", "", 11)
+            for b in e.bullets:
+                pdf.multi_cell(0, 6, f"- {b}")
+
+    if resume.education:
+        _pdf_section(pdf, "Education")
+        for ed in resume.education:
+            header = ed.school
+            if ed.credential:
+                header += f" - {ed.credential}"
+            if ed.dates:
+                header += f" ({ed.dates})"
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.multi_cell(0, 6, header)
+            pdf.set_font("Helvetica", "", 11)
+            for d in ed.details:
+                pdf.multi_cell(0, 6, f"- {d}")
+
+    if resume.skills:
+        _pdf_section(pdf, "Skills")
+        pdf.multi_cell(0, 6, ", ".join(resume.skills))
+
+    if resume.projects:
+        _pdf_section(pdf, "Projects")
+        for p in resume.projects:
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.multi_cell(0, 6, p.name)
+            pdf.set_font("Helvetica", "", 11)
+            for b in p.bullets:
+                pdf.multi_cell(0, 6, f"- {b}")
+
+    return bytes(pdf.output())
+
+
+def export_pdf(resume: Resume, path: str | Path) -> Path:
+    """Write the résumé as a PDF file. Returns the path."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(to_pdf_bytes(resume))
+    logger.info("Exported resume → %s (.pdf)", path)
+    return path
+
+
+def export_resume(resume: Resume, path: str | Path) -> Path:
+    """Export the résumé, choosing the format from `path`'s suffix (`.pdf` or Markdown)."""
+    path = Path(path)
+    if path.suffix.lower() == ".pdf":
+        return export_pdf(resume, path)
+    return export_markdown(resume, path)
