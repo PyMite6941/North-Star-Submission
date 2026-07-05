@@ -2,6 +2,26 @@
 
 Status legend: ✅ done · 🚧 scaffolded (stub logic, ready to flesh out) · ⬜ planned
 
+## Group study + college planning + portable exports
+
+Ties directly to the Access & Equity pitch in [SUBMISSION.md](SUBMISSION.md): a group of
+students studying together with no internet, and a student tracking college applications
+without a cloud account.
+
+- ✅ Flashcards: Anki `.apkg` export (direct double-click import, no CSV step)
+- ✅ CV Builder: PDF export (uploadable to any college/job portal, no Markdown viewer needed)
+- ✅ Quiz: printable Markdown export (questions + answer key) as a group-study handout
+- ✅ **Study Pack** — bundle decks + quizzes + notes into one portable JSON file a group
+  can share by USB / AirDrop / email / messaging app, no server or account (`pack create` /
+  `pack import`)
+- ✅ **Group Quiz** — pass-the-device multiplayer: each named player answers the same
+  quiz, individually graded, leaderboard at the end (`group-quiz`)
+- ✅ **College Planner** (new component) — offline college-application tracker (deadlines,
+  status, notes) + a 4-year course/credit map, with deadlines exportable to `.ics` so they
+  show up in any calendar app
+- ⬜ Study Pack: merge two members' packs into one without duplicate decks
+- ⬜ College Planner: application-task checklists per college (not just status)
+
 ## Foundation
 - ✅ Monorepo layout, single editable install, `.env.example`, docs
 - ✅ `polaris_core`: typed config, Ollama LLM factory + health check, embeddings, memory
@@ -14,8 +34,8 @@ Status legend: ✅ done · 🚧 scaffolded (stub logic, ready to flesh out) · �
 - ✅ Interactive quiz mode — generate → answer → LLM-graded feedback (`quiz`)
 - ✅ Token streaming in `ask` / `chat`
 - ✅ Structured CV Builder — typed sections (contact/summary/experience/education/skills/
-  projects) + Markdown export (`cv`)
-- ⬜ CV export to PDF, Anki `.apkg`
+  projects) + Markdown/PDF export (`cv`)
+- ✅ Offline Study Packs (`pack create`/`pack import`) + Group Quiz (`group-quiz`)
 - ⬜ Packaging as a downloadable desktop app (the brief's "apps that can be downloaded")
 
 ## Component 2 — Study RAG
@@ -34,8 +54,15 @@ Status legend: ✅ done · 🚧 scaffolded (stub logic, ready to flesh out) · �
 - ✅ Structured weekly schedule → `.ics` calendar export (`schedule`)
 - ⬜ Power zones, VO2 trend, richer PR tracking
 
+## Component 4 — College Planner
+- ✅ Offline application tracker (college, deadline, type, status, notes) + a 4-year
+  course/credit map, both in a local SQLite file (no account)
+- ✅ Deadlines → `.ics` export (works in any calendar app)
+- ⬜ Per-college application-task checklists
+- ⬜ Import a course list from a transcript/CSV
+
 ## Cross-cutting
-- ✅ Unified `polaris` CLI (mounts study / rag / fitness + `doctor`, `version`, `serve`)
+- ✅ Unified `polaris` CLI (mounts study / rag / fitness / college + `doctor`, `version`, `serve`)
 - ✅ Model-tag auto-resolution (bare `llama3.2` → installed `llama3.2:3b`)
 - ✅ UTF-8-safe output on Windows (CLIs + runner scripts)
 - ✅ FastAPI service layer (`[serve]` extra) exposing all three graphs

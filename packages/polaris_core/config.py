@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     fitness_db: str = Field(default=".data/fitness.sqlite", alias="POLARIS_FITNESS_DB")
     units: Literal["metric", "imperial"] = Field(default="metric", alias="POLARIS_UNITS")
 
+    # --- College Planner (application tracker + course map) ---
+    college_db: str = Field(default=".data/college.sqlite", alias="POLARIS_COLLEGE_DB")
+
     # --- Logging ---
     log_level: str = Field(default="INFO", alias="POLARIS_LOG_LEVEL")
 
@@ -107,6 +110,11 @@ class Settings(BaseSettings):
 
     def fitness_path(self) -> Path:
         p = self.abspath(self.fitness_db)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        return p
+
+    def college_path(self) -> Path:
+        p = self.abspath(self.college_db)
         p.parent.mkdir(parents=True, exist_ok=True)
         return p
 

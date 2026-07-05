@@ -65,6 +65,28 @@ def test_flashcard_export(tmp_path):
     assert rows == [["Q1", "A1"]]
 
 
+def test_flashcard_apkg_export(tmp_path):
+    """Deck export writes a double-click-importable Anki .apkg (no LLM needed)."""
+    import sqlite3
+    import zipfile
+
+    from study_llm.flashcards import Deck, Flashcard, export_apkg, export_deck
+
+    deck = Deck(topic="Cell Biology", cards=[Flashcard(question="Q1", answer="A1")])
+    out = export_apkg(deck, tmp_path / "deck.apkg")
+    assert out.exists()
+    assert zipfile.is_zipfile(out)
+
+    # export_deck should dispatch on the file suffix.
+    out2 = export_deck(deck, tmp_path / "deck2.apkg")
+    with zipfile.ZipFile(out2) as zf:
+        zf.extract("collection.anki2", tmp_path)
+    conn = sqlite3.connect(tmp_path / "collection.anki2")
+    (note_count,) = conn.execute("SELECT COUNT(*) FROM notes").fetchone()
+    assert note_count == 1
+    conn.close()
+
+
 def test_resume_markdown_export(tmp_path):
     """Résumé export writes clean Markdown (no LLM needed)."""
     from study_llm.cv import ContactInfo, EducationEntry, Resume, export_markdown
@@ -82,6 +104,92 @@ def test_resume_markdown_export(tmp_path):
     assert "## Education" in text
     assert "Lincoln High School" in text
     assert "Python, Public speaking" in text
+
+
+def test_resume_pdf_export(tmp_path):
+    """Résumé export writes a real PDF (no LLM needed)."""
+    from study_llm.cv import ContactInfo, EducationEntry, Resume, export_pdf, export_resume
+
+    resume = Resume(
+        contact=ContactInfo(name="Jordan Lee", email="jordan@example.com"),
+        summary="Motivated high-school senior interested in CS.",
+        education=[EducationEntry(school="Lincoln High School", credential="GPA 3.9")],
+        skills=["Python", "Public speaking"],
+    )
+    out = export_pdf(resume, tmp_path / "resume.pdf")
+    assert out.read_bytes().startswith(b"%PDF-")
+
+    # export_resume should dispatch on the file suffix.
+    out2 = export_resume(resume, tmp_path / "resume2.pdf")
+    assert out2.read_bytes().startswith(b"%PDF-")
+    out3 = export_resume(resume, tmp_path / "resume3.md")
+    assert out3.read_text(encoding="utf-8").startswith("# Jordan Lee")
+
+
+def test_quiz_markdown_export(tmp_path):
+    """Quiz export writes a printable handout with questions before the answer key."""
+    from study_llm.quiz import Quiz, QuizQuestion, export_markdown
+
+    quiz = Quiz(
+        topic="Photosynthesis",
+        questions=[
+            QuizQuestion(
+                question="What pigment absorbs light?",
+                options=["Chlorophyll", "Melanin"],
+                answer="Chlorophyll",
+                explanation="Chlorophyll absorbs red/blue light for photosynthesis.",
+            )
+        ],
+    )
+    out = export_markdown(quiz, tmp_path / "handout.md")
+    text = out.read_text(encoding="utf-8")
+    assert text.startswith("# Quiz — Photosynthesis")
+    assert text.index("What pigment absorbs light?") < text.index("## Answer key")
+    assert "Chlorophyll absorbs red/blue light" in text
+
+
+def test_study_pack_export_import_roundtrip(tmp_path):
+    """A Study Pack round-trips through its portable JSON file (no LLM needed)."""
+    from study_llm.flashcards import Deck, Flashcard
+    from study_llm.groups import StudyPack, export_pack, import_pack
+    from study_llm.quiz import Quiz, QuizQuestion
+
+    pack = StudyPack(
+        name="Bio final",
+        notes="Split the two decks between us.",
+        decks=[
+            Deck(topic="Krebs cycle", cards=[Flashcard(question="Q1", answer="A1")]),
+            Deck(topic="Photosynthesis", cards=[Flashcard(question="Q2", answer="A2")]),
+        ],
+        quizzes=[
+            Quiz(
+                topic="Krebs cycle",
+                questions=[
+                    QuizQuestion(
+                        question="Where?", options=[], answer="Mitochondria", explanation="x"
+                    )
+                ],
+            )
+        ],
+    )
+    out = export_pack(pack, tmp_path / "pack.json")
+    loaded = import_pack(out)
+    assert loaded.name == "Bio final"
+    assert [d.topic for d in loaded.decks] == ["Krebs cycle", "Photosynthesis"]
+    assert loaded.quizzes[0].questions[0].answer == "Mitochondria"
+
+
+def test_group_quiz_leaderboard_ranks_and_breaks_ties():
+    """Leaderboard sorts by score desc, ties broken alphabetically (no LLM needed)."""
+    from study_llm.groups import PlayerResult, leaderboard
+
+    results = [
+        PlayerResult(name="Sam", score=3, total=5),
+        PlayerResult(name="Ana", score=4, total=5),
+        PlayerResult(name="Zoe", score=4, total=5),
+    ]
+    ranked = leaderboard(results)
+    assert [r.name for r in ranked] == ["Ana", "Zoe", "Sam"]
 
 
 def test_fitness_agents_present():
@@ -103,11 +211,11 @@ def test_graphs_build():
 
 
 def test_unified_cli_mounts_subcommands():
-    """The umbrella `polaris` CLI mounts study/rag/fitness groups."""
+    """The umbrella `polaris` CLI mounts study/rag/fitness/college groups."""
     from polaris_cli.main import app
 
     groups = {g.name for g in app.registered_groups}
-    assert {"study", "rag", "fitness"} <= groups
+    assert {"study", "rag", "fitness", "college"} <= groups
 
 
 def test_hr_zones_use_profile_max_hr():
@@ -160,6 +268,52 @@ def test_history_log_and_trends(tmp_path):
             os.environ.pop("POLARIS_FITNESS_DB", None)
         else:
             os.environ["POLARIS_FITNESS_DB"] = old
+        get_settings.cache_clear()
+
+
+def test_college_planner_storage_and_ics_export(tmp_path):
+    """Colleges/courses persist to a temp SQLite DB, and deadlines export to .ics."""
+    import os
+
+    from polaris_core.config import get_settings
+
+    old = os.environ.get("POLARIS_COLLEGE_DB")
+    os.environ["POLARIS_COLLEGE_DB"] = str(tmp_path / "college.sqlite")
+    get_settings.cache_clear()
+    try:
+        from datetime import date
+
+        from college_planner import storage
+        from college_planner.calendar_export import export_deadlines_ics
+        from college_planner.models import CollegeEntry, CourseEntry
+
+        storage.add_college(
+            CollegeEntry(name="MIT", app_type="Early Action", deadline=date(2027, 1, 1))
+        )
+        storage.add_college(CollegeEntry(name="State U"))
+        storage.update_status("MIT", "submitted")
+        colleges = storage.list_colleges()
+        assert {c.name for c in colleges} == {"MIT", "State U"}
+        assert next(c for c in colleges if c.name == "MIT").status == "submitted"
+
+        storage.add_course(
+            CourseEntry(subject="Math", course_name="AP Calculus BC", credits=1.0, year=12)
+        )
+        assert storage.total_credits() == 1.0
+
+        dated = [c for c in colleges if c.deadline is not None]
+        out = export_deadlines_ics(dated, tmp_path / "deadlines.ics")
+        text = out.read_text(encoding="utf-8")
+        assert "BEGIN:VCALENDAR" in text
+        assert "MIT application deadline (Early Action)" in text
+
+        assert storage.remove_college("State U") is True
+        assert {c.name for c in storage.list_colleges()} == {"MIT"}
+    finally:
+        if old is None:
+            os.environ.pop("POLARIS_COLLEGE_DB", None)
+        else:
+            os.environ["POLARIS_COLLEGE_DB"] = old
         get_settings.cache_clear()
 
 

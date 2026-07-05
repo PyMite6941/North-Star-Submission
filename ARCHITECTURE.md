@@ -1,8 +1,9 @@
 # Architecture
 
-North Star is a **monorepo of three LangGraph applications** sharing one core library.
-Design goals, in order: **offline-first**, **robust** (typed config, health checks,
-graceful failover), and **easy to extend** (add an agent = add a file).
+North Star is a **monorepo of three LangGraph applications plus one plain local-storage
+component** (College Planner), sharing one core library. Design goals, in order:
+**offline-first**, **robust** (typed config, health checks, graceful failover), and
+**easy to extend** (add an agent = add a file).
 
 ## Why this layout
 
@@ -12,7 +13,8 @@ the descriptive structure, we split concerns:
 
 - **`packages/`** — all importable library code, in space-free package dirs. One editable
   install (`pip install -e .`) exposes `polaris_core`, `study_llm`, `study_rag`,
-  `fitness_agents` everywhere, and registers the `polaris-*` CLI entry points.
+  `fitness_agents`, `college_planner` everywhere, and registers the `polaris-*` CLI
+  entry points.
 - **The spaced component folders** — documentation, runnable entry scripts, agent
   markdown, and sample/seed data. These import from the installed packages.
 
@@ -47,6 +49,11 @@ areas: flashcards | quizzing | cv_builder | advisor | citation | essay
 `route` uses the LLM (structured output) to pick the area; each area node owns a focused
 system prompt. Adding a 7th area = add an enum member + a node.
 
+`study_llm` also has two group-study modules that sit beside the graph rather than in it
+(no routing needed — they call `flashcards.generate_deck` / `quiz.generate_quiz` directly):
+`groups.py` (`StudyPack` — bundle decks/quizzes into one portable JSON file; `PlayerResult`
++ `leaderboard()` for pass-the-device Group Quiz scoring).
+
 ### 2. Study RAG — `study_rag`
 A **corrective-RAG** topology for accuracy.
 
@@ -68,10 +75,30 @@ runtime by `agents.py`. Parsers (`parsers.py`) normalize `.fit/.tcx/.gpx/.csv/.j
 common `ActivityRecord` schema; `metrics.py` computes distance/pace/HR-zone/load summaries
 that ground the agents in real numbers.
 
+### 4. College Planner — `college_planner`
+
+No LLM, no graph — plain typed records over local SQLite, the same pattern as the
+Fitness Agents history:
+
+```
+models.py (CollegeEntry, CourseEntry)  →  storage.py (SQLite CRUD)  →  cli.py
+                                        →  calendar_export.py (deadlines → .ics)
+```
+
+`storage.py` mirrors `fitness_agents/history.py`'s connection pattern (one SQLite file at
+`POLARIS_COLLEGE_DB`, row-factory dicts mapped back to pydantic models).
+`calendar_export.py` writes the same hand-rolled RFC 5545 text as
+`fitness_agents/schedule.py`'s `.ics` export, duplicated rather than shared to keep every
+component depending only on `polaris_core`.
+
 ## Data flow & persistence
 
 - **Vector DB:** Chroma, embedded, on local disk — no server.
 - **Conversation memory:** LangGraph SQLite checkpointer (`.data/checkpoints.sqlite`).
+- **Fitness / college history:** each its own local SQLite file (`.data/fitness.sqlite`,
+  `.data/college.sqlite`) — no shared server, no sync.
+- **Study Packs:** a single portable JSON file (no DB) — the whole point is that it's one
+  file a group can pass around.
 - **User uploads:** kept under `uploads/` (git-ignored); only `sample_*` data is committed.
 
 ## Failover & robustness

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typer
+from college_planner.cli import app as college_app
 from fitness_agents.cli import app as fitness_app
 from polaris_core import __version__
 from polaris_core.config import get_settings
@@ -21,6 +22,7 @@ config_app = typer.Typer(help="Inspect the resolved configuration.", no_args_is_
 app.add_typer(study_app, name="study", help="The 6-area study LLM.")
 app.add_typer(rag_app, name="rag", help="Vector-DB study agent (RAG).")
 app.add_typer(fitness_app, name="fitness", help="Fitness file analysis + growth plan.")
+app.add_typer(college_app, name="college", help="College-application tracker + course map.")
 app.add_typer(config_app, name="config", help="Inspect the resolved configuration.")
 
 _SECRET_FIELDS = {"groq_api_key", "openrouter_api_key"}

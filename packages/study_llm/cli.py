@@ -3,8 +3,12 @@
     polaris-study chat                 # interactive, memory-backed session
     polaris-study ask "make flashcards about the Krebs cycle"
     polaris-study ask "..." --area essay   # force an area, skip the router
-    polaris-study flashcards "Krebs cycle" -n 8 --export deck.csv
-    polaris-study cv "rising senior, 3.8 GPA, ..." --export resume.md
+    polaris-study flashcards "Krebs cycle" -n 8 --export deck.csv   # or deck.apkg (Anki)
+    polaris-study cv "rising senior, 3.8 GPA, ..." --export resume.md   # or resume.pdf
+    polaris-study quiz "the French Revolution" -n 5 --export handout.md --no-interactive
+    polaris-study pack create "Bio final" -t "Krebs cycle" -t "Photosynthesis" -e pack.json
+    polaris-study pack import pack.json --export-dir out/     # -> out/*.apkg for each deck
+    polaris-study group-quiz "the French Revolution" -p Ana -p Sam -p Lee
     polaris-study areas                # list the 6 areas
     polaris-study doctor               # check Ollama + model availability
 """
@@ -22,9 +26,11 @@ from polaris_core.memory import sqlite_checkpointer
 from polaris_core.polaris import POLARIS_AREAS, PolarisArea
 from rich.table import Table
 
-from study_llm.cv import export_markdown, generate_resume
-from study_llm.flashcards import export_csv, generate_deck
+from study_llm.cv import export_resume, generate_resume
+from study_llm.flashcards import export_deck, generate_deck
 from study_llm.graph import build_graph
+from study_llm.groups import PlayerResult, build_pack, export_pack, import_pack, leaderboard
+from study_llm.quiz import export_markdown as export_quiz_markdown
 from study_llm.quiz import generate_quiz, grade_quiz
 
 
@@ -47,6 +53,8 @@ def _stream_answer(graph, state: dict, config: dict | None = None):
     return area
 
 app = typer.Typer(help="Offline study LLM — the 6 areas of Polaris.", no_args_is_help=True)
+pack_app = typer.Typer(help="Offline Study Packs — bundle decks to share with a group.")
+app.add_typer(pack_app, name="pack")
 
 
 @app.command()
@@ -94,10 +102,10 @@ def flashcards(
     topic: str,
     count: int = typer.Option(10, "--count", "-n", help="How many cards to generate."),
     export: Path | None = typer.Option(
-        None, "--export", "-e", help="Write an Anki-importable CSV to this path."
+        None, "--export", "-e", help="Write to this path — .csv or .apkg (Anki package)."
     ),
 ) -> None:
-    """Generate a structured flashcard deck (and optionally export to CSV)."""
+    """Generate a structured flashcard deck (and optionally export to CSV or Anki .apkg)."""
     deck = generate_deck(topic, count=count)
     table = Table(title=f"Flashcards — {deck.topic}")
     table.add_column("#", style="dim", width=3)
@@ -107,7 +115,7 @@ def flashcards(
         table.add_row(str(i), card.question, card.answer)
     console.print(table)
     if export is not None:
-        path = export_csv(deck, export)
+        path = export_deck(deck, export)
         console.print(f"[green]✓ Exported {len(deck.cards)} cards →[/] {path}")
 
 
@@ -117,10 +125,10 @@ def cv(
         ..., help="Free-form details: name, background, experience, education, skills..."
     ),
     export: Path | None = typer.Option(
-        None, "--export", "-e", help="Write the résumé as Markdown to this path."
+        None, "--export", "-e", help="Write to this path — .pdf or Markdown."
     ),
 ) -> None:
-    """Generate a structured résumé (and optionally export to Markdown)."""
+    """Generate a structured résumé (and optionally export to PDF or Markdown)."""
     resume = generate_resume(details)
     console.print(f"[bold]{resume.contact.name}[/]")
     if resume.summary:
@@ -138,7 +146,7 @@ def cv(
         console.rule("Skills")
         console.print(", ".join(resume.skills))
     if export is not None:
-        path = export_markdown(resume, export)
+        path = export_resume(resume, export)
         console.print(f"[green]✓ Exported résumé →[/] {path}")
 
 
@@ -150,9 +158,16 @@ def quiz(
     interactive: bool = typer.Option(
         True, "--interactive/--no-interactive", help="Prompt for answers and grade them."
     ),
+    export: Path | None = typer.Option(
+        None, "--export", "-e", help="Write a printable Markdown handout (questions + answer key)."
+    ),
 ) -> None:
     """Generate a quiz and (interactively) grade your answers."""
     quiz_obj = generate_quiz(topic, count=count, difficulty=difficulty)
+
+    if export is not None:
+        path = export_quiz_markdown(quiz_obj, export)
+        console.print(f"[green]✓ Exported {len(quiz_obj.questions)} questions →[/] {path}")
 
     if not interactive:
         for i, q in enumerate(quiz_obj.questions, 1):
@@ -180,6 +195,96 @@ def quiz(
         mark = "[green]✓[/]" if g.correct else "[red]✗[/]"
         console.print(f"{mark} [bold]{i}.[/] correct answer: {q.answer}")
         console.print(f"   [dim]{g.feedback}[/]")
+
+
+@pack_app.command("create")
+def pack_create(
+    name: str,
+    topic: list[str] = typer.Option(
+        ..., "--topic", "-t", help="A topic to generate a deck for (repeat per member/subtopic)."
+    ),
+    count: int = typer.Option(10, "--count", "-n", help="Cards per deck."),
+    export: Path = typer.Option(..., "--export", "-e", help="Write the pack to this JSON path."),
+) -> None:
+    """Generate one deck per --topic and bundle them into a single, shareable Study Pack."""
+    pack = build_pack(name, topics=topic, cards_per_deck=count)
+    path = export_pack(pack, export)
+    console.print(
+        f"[green]✓ Built study pack[/] {pack.name!r} — {len(pack.decks)} deck(s) → {path}"
+    )
+    console.print("[dim]Share this file with your group (USB, AirDrop, email, chat app).[/]")
+
+
+@pack_app.command("import")
+def pack_import(
+    path: Path,
+    export_dir: Path | None = typer.Option(
+        None, "--export-dir", help="Also export every deck in the pack as .apkg into this folder."
+    ),
+) -> None:
+    """Load a Study Pack a group member shared with you, and optionally export every deck."""
+    pack = import_pack(path)
+    console.print(f"[bold]{pack.name}[/]")
+    if pack.notes:
+        console.print(pack.notes)
+    table = Table(title="Decks in this pack")
+    table.add_column("Topic", style="cyan")
+    table.add_column("Cards", justify="right")
+    for deck in pack.decks:
+        table.add_row(deck.topic, str(len(deck.cards)))
+    console.print(table)
+    if export_dir is not None:
+        export_dir.mkdir(parents=True, exist_ok=True)
+        for deck in pack.decks:
+            safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in deck.topic)
+            out = export_deck(deck, export_dir / f"{safe_name}.apkg")
+            console.print(f"[green]✓[/] {out}")
+
+
+@app.command("group-quiz")
+def group_quiz(
+    topic: str,
+    player: list[str] = typer.Option(
+        ..., "--player", "-p", help="A player's name (repeat once per person)."
+    ),
+    count: int = typer.Option(5, "--count", "-n", help="How many questions."),
+    difficulty: str = typer.Option("medium", "--difficulty", "-d", help="easy | medium | hard."),
+) -> None:
+    """Pass-the-device quiz: everyone answers the same quiz, one at a time; ends with a
+    leaderboard. Built for a study group in one room with no internet and one device."""
+    quiz_obj = generate_quiz(topic, count=count, difficulty=difficulty)
+    results: list[PlayerResult] = []
+
+    for name in player:
+        console.rule(f"{name}'s turn")
+        try:
+            console.input(f"[dim]Pass the device to[/] [bold]{name}[/][dim] — press enter> [/]")
+        except (EOFError, KeyboardInterrupt):
+            console.print("\nAborted.")
+            return
+        answers: list[str] = []
+        for i, q in enumerate(quiz_obj.questions, 1):
+            console.print(f"\n[bold]{i}. {q.question}[/]")
+            for j, opt in enumerate(q.options):
+                console.print(f"   {chr(97 + j)}) {opt}")
+            try:
+                answers.append(console.input("[cyan]your answer> [/]").strip())
+            except (EOFError, KeyboardInterrupt):
+                console.print("\nAborted.")
+                return
+        graded = grade_quiz(quiz_obj, answers)
+        score = sum(1 for g in graded if g.correct)
+        results.append(PlayerResult(name=name, score=score, total=len(quiz_obj.questions)))
+        console.print(f"[green]{name}: {score}/{len(quiz_obj.questions)}[/]")
+
+    console.rule("Leaderboard")
+    table = Table()
+    table.add_column("#", style="dim")
+    table.add_column("Player", style="bold")
+    table.add_column("Score", justify="right")
+    for i, r in enumerate(leaderboard(results), 1):
+        table.add_row(str(i), r.name, f"{r.score}/{r.total}")
+    console.print(table)
 
 
 @app.command()
