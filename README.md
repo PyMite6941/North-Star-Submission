@@ -2,6 +2,10 @@
 
 **Offline-first, local-LLM agents for studying and fitness — built on [LangGraph](https://langchain-ai.github.io/langgraph/) + [Ollama](https://ollama.com).**
 
+> **North Star Challenge judges:** start with [SUBMISSION.md](SUBMISSION.md) — the
+> problem brief, track (Access & Equity), evidence of traction, and AI-usage note, mapped
+> to the published rubric.
+
 North Star is a set of three downloadable, privacy-preserving AI components that run
 entirely on a user's own device (no API keys required). Everything is orchestrated with
 LangGraph state machines and powered by a local LLM through Ollama.
@@ -99,6 +103,7 @@ polaris study chat                                   # interactive, memory-backe
 polaris study ask "Explain osmosis" --area advisor   # force an area, skip the router
 polaris study flashcards "the Krebs cycle" -n 8 --export deck.csv  # structured deck → Anki CSV
 polaris study quiz "the French Revolution" -n 5      # interactive, LLM-graded quiz
+polaris study cv "junior year, 3.8 GPA, robotics club captain..." --export resume.md  # structured résumé → Markdown
 
 # Study RAG (vector-DB notes; supports .md/.txt/.pdf/.docx/.pptx, incremental)
 polaris rag ingest "study local notes with vector db/sample_notes"
@@ -167,6 +172,7 @@ North Star Submission/
 
 | Doc | What's in it |
 |-----|--------------|
+| [SUBMISSION.md](SUBMISSION.md) | North Star Challenge problem brief, track, traction, and AI-usage note. |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design, why the layout, each component's LangGraph topology. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, conventions, how to add an area / agent / file format. |
 | [ROADMAP.md](ROADMAP.md) | Status of each component and what's next. |

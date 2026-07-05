@@ -4,6 +4,7 @@
     polaris-study ask "make flashcards about the Krebs cycle"
     polaris-study ask "..." --area essay   # force an area, skip the router
     polaris-study flashcards "Krebs cycle" -n 8 --export deck.csv
+    polaris-study cv "rising senior, 3.8 GPA, ..." --export resume.md
     polaris-study areas                # list the 6 areas
     polaris-study doctor               # check Ollama + model availability
 """
@@ -21,6 +22,7 @@ from polaris_core.memory import sqlite_checkpointer
 from polaris_core.polaris import POLARIS_AREAS, PolarisArea
 from rich.table import Table
 
+from study_llm.cv import export_markdown, generate_resume
 from study_llm.flashcards import export_csv, generate_deck
 from study_llm.graph import build_graph
 from study_llm.quiz import generate_quiz, grade_quiz
@@ -107,6 +109,37 @@ def flashcards(
     if export is not None:
         path = export_csv(deck, export)
         console.print(f"[green]✓ Exported {len(deck.cards)} cards →[/] {path}")
+
+
+@app.command()
+def cv(
+    details: str = typer.Argument(
+        ..., help="Free-form details: name, background, experience, education, skills..."
+    ),
+    export: Path | None = typer.Option(
+        None, "--export", "-e", help="Write the résumé as Markdown to this path."
+    ),
+) -> None:
+    """Generate a structured résumé (and optionally export to Markdown)."""
+    resume = generate_resume(details)
+    console.print(f"[bold]{resume.contact.name}[/]")
+    if resume.summary:
+        console.print(resume.summary)
+    for section, entries in (
+        ("Experience", resume.experience),
+        ("Education", resume.education),
+        ("Projects", resume.projects),
+    ):
+        if entries:
+            console.rule(section)
+            for entry in entries:
+                console.print(entry)
+    if resume.skills:
+        console.rule("Skills")
+        console.print(", ".join(resume.skills))
+    if export is not None:
+        path = export_markdown(resume, export)
+        console.print(f"[green]✓ Exported résumé →[/] {path}")
 
 
 @app.command()

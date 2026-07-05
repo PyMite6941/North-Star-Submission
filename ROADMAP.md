@@ -13,7 +13,9 @@ Status legend: ✅ done · 🚧 scaffolded (stub logic, ready to flesh out) · �
 - ✅ Structured flashcard deck (typed output) + Anki-importable CSV export (`flashcards`)
 - ✅ Interactive quiz mode — generate → answer → LLM-graded feedback (`quiz`)
 - ✅ Token streaming in `ask` / `chat`
-- ⬜ Structured CV export (sections → Markdown/PDF), Anki `.apkg`
+- ✅ Structured CV Builder — typed sections (contact/summary/experience/education/skills/
+  projects) + Markdown export (`cv`)
+- ⬜ CV export to PDF, Anki `.apkg`
 - ⬜ Packaging as a downloadable desktop app (the brief's "apps that can be downloaded")
 
 ## Component 2 — Study RAG
