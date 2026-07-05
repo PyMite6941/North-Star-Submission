@@ -29,6 +29,18 @@ chroma/
 **/uploads/
 !**/sample_*/
 
+# --- Android (android-native/) ---
+android-native/**/build/
+android-native/.gradle/
+android-native/local.properties
+*.apk
+*.aab
+*.task
+
+# --- Swift (ios-native/) ---
+ios-native/.build/
+ios-native/.swiftpm/
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db

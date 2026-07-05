@@ -15,66 +15,15 @@ from pathlib import Path
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from polaris_core.config import Settings, get_settings
+from polaris_core.documents import SUPPORTED, iter_files, read_file
 from polaris_core.logging import get_logger
 
 from study_rag.store import get_vectorstore
 
 logger = get_logger(__name__)
 
-# Plain-text formats read directly.
-TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".rst"}
-# Rich formats via loaders (deps installed with the project).
-DOC_SUFFIXES = {".pdf", ".docx", ".pptx"}
-SUPPORTED = TEXT_SUFFIXES | DOC_SUFFIXES
-
-
-def _read_pdf(path: Path) -> str:
-    from pypdf import PdfReader
-
-    reader = PdfReader(str(path))
-    return "\n\n".join((page.extract_text() or "") for page in reader.pages)
-
-
-def _read_docx(path: Path) -> str:
-    import docx2txt
-
-    return docx2txt.process(str(path)) or ""
-
-
-def _read_pptx(path: Path) -> str:
-    from pptx import Presentation
-
-    prs = Presentation(str(path))
-    parts: list[str] = []
-    for slide in prs.slides:
-        for shape in slide.shapes:
-            if shape.has_text_frame:
-                parts.append(shape.text_frame.text)
-    return "\n\n".join(p for p in parts if p)
-
-
-def _read_file(path: Path) -> str | None:
-    """Extract text from a supported file, or None if unreadable/unsupported."""
-    suffix = path.suffix.lower()
-    try:
-        if suffix in TEXT_SUFFIXES:
-            return path.read_text(encoding="utf-8")
-        if suffix == ".pdf":
-            return _read_pdf(path)
-        if suffix == ".docx":
-            return _read_docx(path)
-        if suffix == ".pptx":
-            return _read_pptx(path)
-    except Exception as exc:  # noqa: BLE001 - skip unreadable files, keep going
-        logger.warning("Skipping %s (%s)", path, exc)
-    return None
-
-
-def _iter_files(path: Path):
-    files = [path] if path.is_file() else sorted(path.rglob("*"))
-    for f in files:
-        if f.is_file() and f.suffix.lower() in SUPPORTED:
-            yield f
+# Supported note formats (.md/.txt/.rst/.pdf/.docx/.pptx) — see polaris_core.documents.
+__all__ = ["ingest_path", "SUPPORTED"]
 
 
 def _content_hash(text: str) -> str:
@@ -101,8 +50,8 @@ def ingest_path(target: str | Path, settings: Settings | None = None) -> int:
 
     total_new = 0
     skipped = 0
-    for f in _iter_files(path):
-        text = _read_file(f)
+    for f in iter_files(path):
+        text = read_file(f)
         if not text or not text.strip():
             continue
         source = str(f)

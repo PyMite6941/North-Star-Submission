@@ -9,6 +9,9 @@ from pydantic import BaseModel
 
 from fitness_agents.parsers import ActivityRecord
 
+_KM_PER_MI = 1.609344
+_M_PER_FT = 0.3048
+
 
 class ActivitySummary(BaseModel):
     """Aggregate metrics for one activity / file."""
@@ -26,19 +29,40 @@ class ActivitySummary(BaseModel):
     training_load: float | None = None
     hr_zones: dict[str, float] | None = None  # zone -> fraction of time
 
-    def to_prompt(self) -> str:
-        """Compact, LLM-friendly rendering of the metrics."""
+    def to_prompt(self, units: str | None = None) -> str:
+        """Compact, LLM-friendly rendering of the metrics.
+
+        ``units`` is ``"metric"`` or ``"imperial"``; defaults to ``POLARIS_UNITS``.
+        """
+        if units is None:
+            from polaris_core.config import get_settings
+
+            units = get_settings().units
+        imperial = units == "imperial"
+
         lines = [f"- samples: {self.n_samples}"]
         if self.duration_s:
             lines.append(f"- duration: {self.duration_s / 60:.1f} min")
         if self.distance_km:
-            lines.append(f"- distance: {self.distance_km:.2f} km")
+            if imperial:
+                lines.append(f"- distance: {self.distance_km / _KM_PER_MI:.2f} mi")
+            else:
+                lines.append(f"- distance: {self.distance_km:.2f} km")
         if self.avg_speed_kmh:
-            lines.append(f"- avg speed: {self.avg_speed_kmh:.2f} km/h")
+            if imperial:
+                lines.append(f"- avg speed: {self.avg_speed_kmh / _KM_PER_MI:.2f} mph")
+            else:
+                lines.append(f"- avg speed: {self.avg_speed_kmh:.2f} km/h")
         if self.avg_pace_min_per_km:
-            lines.append(f"- avg pace: {self.avg_pace_min_per_km:.2f} min/km")
+            if imperial:
+                lines.append(f"- avg pace: {self.avg_pace_min_per_km * _KM_PER_MI:.2f} min/mi")
+            else:
+                lines.append(f"- avg pace: {self.avg_pace_min_per_km:.2f} min/km")
         if self.elevation_gain_m is not None:
-            lines.append(f"- elevation gain: {self.elevation_gain_m:.0f} m")
+            if imperial:
+                lines.append(f"- elevation gain: {self.elevation_gain_m / _M_PER_FT:.0f} ft")
+            else:
+                lines.append(f"- elevation gain: {self.elevation_gain_m:.0f} m")
         if self.avg_heart_rate:
             lines.append(f"- avg HR: {self.avg_heart_rate:.0f} bpm (max {self.max_heart_rate:.0f})")
         if self.training_load is not None:

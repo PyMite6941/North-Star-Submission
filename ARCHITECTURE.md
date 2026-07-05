@@ -1,8 +1,9 @@
 # Architecture
 
-North Star is a **monorepo of three LangGraph applications** sharing one core library.
-Design goals, in order: **offline-first**, **robust** (typed config, health checks,
-graceful failover), and **easy to extend** (add an agent = add a file).
+North Star is a **monorepo of three LangGraph applications plus one plain local-storage
+component** (College Planner), sharing one core library. Design goals, in order:
+**offline-first**, **robust** (typed config, health checks, graceful failover), and
+**easy to extend** (add an agent = add a file).
 
 ## Why this layout
 
@@ -12,7 +13,8 @@ the descriptive structure, we split concerns:
 
 - **`packages/`** — all importable library code, in space-free package dirs. One editable
   install (`pip install -e .`) exposes `polaris_core`, `study_llm`, `study_rag`,
-  `fitness_agents` everywhere, and registers the `polaris-*` CLI entry points.
+  `fitness_agents`, `college_planner` everywhere, and registers the `polaris-*` CLI
+  entry points.
 - **The spaced component folders** — documentation, runnable entry scripts, agent
   markdown, and sample/seed data. These import from the installed packages.
 
@@ -49,6 +51,11 @@ areas: flashcards | quizzing | cv_builder | advisor | citation | essay
 `route` uses the LLM (structured output) to pick the area; each area node owns a focused
 system prompt. Adding a 7th area = add an enum member + a node.
 
+`study_llm` also has two group-study modules that sit beside the graph rather than in it
+(no routing needed — they call `flashcards.generate_deck` / `quiz.generate_quiz` directly):
+`groups.py` (`StudyPack` — bundle decks/quizzes into one portable JSON file; `PlayerResult`
++ `leaderboard()` for pass-the-device Group Quiz scoring).
+
 ### 2. Study RAG — `study_rag`
 A **corrective-RAG** topology for accuracy.
 
@@ -57,6 +64,12 @@ ingest (offline, one-time):  load → split → embed → Chroma
 query:  START → retrieve → grade_docs → generate (cited) → END
                               └─ (if weak) → rewrite_query → retrieve
 ```
+
+`study_rag` also has `discord_sync.py` — a read-only, one-way pull of a single Discord
+channel's messages (via the official REST API, a scoped bot token) into a Markdown note
+that feeds straight into the same ingest pipeline. Not part of the query graph; it's a
+separate, occasional "add a source" step. See
+[docs/discord-announcements-sync.md](docs/discord-announcements-sync.md).
 Chroma persists to disk (`.data/chroma`), so retrieval works fully offline once ingested.
 Ingestion reads `.md/.txt/.rst/.pdf/.docx/.pptx` and is **incremental**: each file's content
 is hashed, so re-ingesting skips unchanged files and upserts (re-indexes) changed ones.
@@ -77,22 +90,50 @@ Two extra fitness modules build on this:
   (fitness/fatigue/form) and PRs, which the analyst node reads for progress context.
 - `schedule.py` — structured-output weekly plan (`WeeklySchedule`) with `.ics` export.
 
+### 4. College Planner — `college_planner`
+
+No LLM, no graph — plain typed records over local SQLite, the same pattern as the
+Fitness Agents history:
+
+```
+models.py (CollegeEntry, CourseEntry)  →  storage.py (SQLite CRUD)  →  cli.py
+                                        →  calendar_export.py (deadlines → .ics)
+```
+
+`storage.py` mirrors `fitness_agents/history.py`'s connection pattern (one SQLite file at
+`POLARIS_COLLEGE_DB`, row-factory dicts mapped back to pydantic models).
+`calendar_export.py` writes the same hand-rolled RFC 5545 text as
+`fitness_agents/schedule.py`'s `.ics` export, duplicated rather than shared to keep every
+component depending only on `polaris_core`.
+
+### Student-life features (vector-store-backed) — `syllabus`, `planner`, `pomodoro`, `clubs`, `recall`
+
+These newer packages share one Chroma collection (`POLARIS_APP_COLLECTION`) via
+`polaris_core/store.py`, storing each item as an embedded document with structured metadata
+(dates, weights, SM-2 state). This gives every feature semantic search *and* exact
+metadata filtering, and lets the free-API interpreter reason across all of them.
+
 ## Interfaces (CLI / API / UI)
 
-The graphs are the single source of truth; every interface is a thin wrapper over them:
+The graphs and services are the single source of truth; every interface is a thin wrapper:
 - **`polaris_cli`** — the unified `polaris` command mounts each component's Typer app
-  (`study` / `rag` / `fitness`) plus `doctor`, `version`, `serve`.
+  (`study` / `rag` / `fitness` / `college`) plus `doctor`, `version`, `serve`.
 - **`polaris_api`** — a FastAPI app (`[serve]` extra) exposing `/study`, `/rag`, `/fitness`,
-  `/health`. Run with `polaris serve`.
-- **`webui/app.py`** — a Streamlit UI (`[ui]` extra) calling the same package functions.
+  the student-life feature routers, and `/health`. Run with `polaris serve`.
+- **`webui/app.py`** — a Streamlit UI (`[ui]` extra); **`frontend/`** — a React + Vite site,
+  both calling the same package functions / API.
 
-Because all three call the identical functions, behaviour is consistent across CLI, HTTP,
-and UI.
+Because every interface calls the identical functions, behaviour is consistent across CLI,
+HTTP, and UI.
 
 ## Data flow & persistence
 
 - **Vector DB:** Chroma, embedded, on local disk — no server.
 - **Conversation memory:** LangGraph SQLite checkpointer (`.data/checkpoints.sqlite`).
+- **Fitness / college history:** each its own local SQLite file (`.data/fitness.sqlite`,
+  `.data/college.sqlite`) — no shared server, no sync.
+- **Study Packs:** a single portable JSON file (no DB) — the whole point is that it's one
+  file a group can pass around.
 - **User uploads:** kept under `uploads/` (git-ignored); only `sample_*` data is committed.
 
 ## Failover & robustness
@@ -103,3 +144,7 @@ and UI.
   can fall back to a hosted free model when Ollama is unreachable. Default is **local-only**.
 - All config is typed and validated at startup (pydantic), so misconfiguration fails fast
   with a clear message rather than deep in a graph run.
+- `POLARIS_LOW_POWER` / `POLARIS_SAVE_MEMORY` (`polaris_core/llm.py`'s
+  `_effective_model_and_options`) trade quality for less CPU/battery/RAM on constrained
+  devices: low power swaps in a smaller chat model, save memory shrinks the context
+  window and caps generated tokens. Both are opt-in and off by default.

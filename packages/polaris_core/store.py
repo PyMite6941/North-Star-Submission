@@ -82,7 +82,9 @@ def put(kind: str, text: str, meta: dict[str, Any] | None = None, id: str | None
     """Insert or update an item of ``kind``. Returns its id."""
     rid = id or f"{kind}:{uuid.uuid4().hex[:12]}"
     md = _encode({**(meta or {}), "kind": kind, "updated_at": time.time()})
-    _collection().upsert(ids=[rid], documents=[text or " "], embeddings=[_embed(text)], metadatas=[md])
+    _collection().upsert(
+        ids=[rid], documents=[text or " "], embeddings=[_embed(text)], metadatas=[md]
+    )
     return rid
 
 
@@ -99,19 +101,25 @@ def all(kind: str, where: dict[str, Any] | None = None) -> list[Record]:
     if where:
         flt = {"$and": [{"kind": kind}, *[{k: v} for k, v in where.items()]]}
     res = _collection().get(where=flt, include=["documents", "metadatas"])
-    return [_to_record(i, d, m) for i, d, m in zip(res["ids"], res["documents"], res["metadatas"])]
+    return [
+        _to_record(i, d, m)
+        for i, d, m in zip(res["ids"], res["documents"], res["metadatas"], strict=False)
+    ]
 
 
 def search(kind: str | None, text: str, k: int = 5) -> list[Record]:
     """Semantic search, optionally scoped to a kind."""
     where = {"kind": kind} if kind else None
     res = _collection().query(
-        query_embeddings=[_embed(text)], n_results=k, where=where, include=["documents", "metadatas"]
+        query_embeddings=[_embed(text)],
+        n_results=k,
+        where=where,
+        include=["documents", "metadatas"],
     )
     ids = res["ids"][0] if res["ids"] else []
     docs = res["documents"][0] if res.get("documents") else []
     metas = res["metadatas"][0] if res.get("metadatas") else []
-    return [_to_record(i, d, m) for i, d, m in zip(ids, docs, metas)]
+    return [_to_record(i, d, m) for i, d, m in zip(ids, docs, metas, strict=False)]
 
 
 def delete(id: str) -> None:

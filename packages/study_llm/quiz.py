@@ -2,9 +2,13 @@
 
 Generates a typed quiz (so it renders and grades reliably) and grades a learner's
 answers with per-question feedback — turning the Quizzing area into a real study loop.
+Also exports to a printable Markdown handout, questions separate from the answer key, for
+a study group without a device each.
 """
 
 from __future__ import annotations
+
+from pathlib import Path
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from polaris_core.llm import get_chat_model
@@ -80,3 +84,29 @@ def grade_quiz(quiz: Quiz, answers: list[str]) -> list[GradedAnswer]:
     while len(graded) < len(quiz.questions):
         graded.append(GradedAnswer(correct=False, feedback="(not graded)"))
     return graded[: len(quiz.questions)]
+
+
+def to_markdown(quiz: Quiz) -> str:
+    """Render a printable handout: questions first, then a separate answer key —
+    so a study group can quiz each other from the same page without seeing answers."""
+    lines: list[str] = [f"# Quiz — {quiz.topic}", ""]
+    for i, q in enumerate(quiz.questions, 1):
+        lines.append(f"**{i}.** {q.question}")
+        for j, opt in enumerate(q.options):
+            lines.append(f"   {chr(97 + j)}) {opt}")
+        lines.append("")
+
+    lines += ["---", "", "## Answer key", ""]
+    for i, q in enumerate(quiz.questions, 1):
+        lines.append(f"**{i}.** {q.answer} — {q.explanation}")
+
+    return "\n".join(lines) + "\n"
+
+
+def export_markdown(quiz: Quiz, path: str | Path) -> Path:
+    """Write the quiz as a printable Markdown handout. Returns the path."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(to_markdown(quiz), encoding="utf-8")
+    logger.info("Exported %d questions → %s", len(quiz.questions), path)
+    return path

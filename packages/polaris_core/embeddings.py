@@ -17,9 +17,8 @@ def get_embeddings(settings: Settings | None = None) -> Embeddings:
     - ``fastembed``: pure-offline ONNX embeddings (needs the ``offline-embeddings`` extra).
     """
     settings = settings or get_settings()
-    backend = settings.embed_backend.lower()
 
-    if backend == "fastembed":
+    if settings.embed_backend == "fastembed":
         try:
             from langchain_community.embeddings import FastEmbedEmbeddings
         except ImportError as exc:  # pragma: no cover - optional dependency
