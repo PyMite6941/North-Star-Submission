@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from polaris_core.config import get_settings
 from polaris_core.logging import get_logger
 
-from fitness_agents.metrics import ActivitySummary
+from fitness_agents.metrics import _KM_PER_MI, ActivitySummary
 
 logger = get_logger(__name__)
 
@@ -94,20 +94,32 @@ class Trends:
     longest_km: float | None
     best_pace_min_per_km: float | None
 
-    def to_prompt(self) -> str:
+    def to_prompt(self, units: str | None = None) -> str:
+        """``units`` is ``"metric"`` or ``"imperial"``; defaults to ``POLARIS_UNITS``."""
+        if units is None:
+            from polaris_core.config import get_settings
+
+            units = get_settings().units
+        imperial = units == "imperial"
+
+        def _dist(km: float) -> str:
+            return f"{km / _KM_PER_MI:.1f} mi" if imperial else f"{km:.1f} km"
+
         form = "fresh" if self.tsb > 5 else "fatigued" if self.tsb < -10 else "neutral"
         lines = [
             f"- sessions logged: {self.n_sessions}",
             f"- fitness (CTL): {self.ctl:.1f}",
             f"- fatigue (ATL): {self.atl:.1f}",
             f"- form (TSB): {self.tsb:+.1f} ({form})",
-            f"- total distance: {self.total_distance_km:.1f} km",
-            f"- last 7 days: {self.last7_distance_km:.1f} km",
+            f"- total distance: {_dist(self.total_distance_km)}",
+            f"- last 7 days: {_dist(self.last7_distance_km)}",
         ]
         if self.longest_km:
-            lines.append(f"- longest activity: {self.longest_km:.1f} km")
+            lines.append(f"- longest activity: {_dist(self.longest_km)}")
         if self.best_pace_min_per_km:
-            lines.append(f"- best avg pace: {self.best_pace_min_per_km:.2f} min/km")
+            pace = self.best_pace_min_per_km
+            pace_str = f"{pace * _KM_PER_MI:.2f} min/mi" if imperial else f"{pace:.2f} min/km"
+            lines.append(f"- best avg pace: {pace_str}")
         return "\n".join(lines)
 
 

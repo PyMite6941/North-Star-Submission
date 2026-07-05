@@ -63,17 +63,20 @@ def get_chat_model(
     settings: Settings | None = None,
     model: str | None = None,
     temperature: float | None = None,
-    allow_cloud: bool = False,
+    allow_cloud: bool | None = None,
     **kwargs,
 ) -> BaseChatModel:
     """Return a chat model.
 
-    Tries local Ollama first. If unreachable and ``allow_cloud`` is set with a
-    configured key, falls back to a hosted free model via the OpenAI-compatible API.
+    Tries local Ollama first. If unreachable, falls back to a hosted free model via
+    the OpenAI-compatible API — but only when cloud fallback is actually allowed:
+    ``allow_cloud`` if explicitly passed, else the ``POLARIS_ALLOW_CLOUD_FALLBACK``
+    admin setting (which itself requires a configured key; see ``Settings.cloud_fallback_active``).
     """
     settings = settings or get_settings()
     model = model or settings.chat_model
     temperature = settings.temperature if temperature is None else temperature
+    allow_cloud = settings.allow_cloud_fallback if allow_cloud is None else allow_cloud
 
     status = check_ollama(settings)
     if status.reachable:
