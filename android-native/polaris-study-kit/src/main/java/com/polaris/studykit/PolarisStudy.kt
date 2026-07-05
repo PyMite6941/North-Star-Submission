@@ -3,11 +3,18 @@ package com.polaris.studykit
 import android.content.Context
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOptions
+import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
+import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession.LlmInferenceSessionOptions
 
 /**
  * On-device study assistant: routes a request to one of the six Polaris areas, then answers
  * with that area's specialized prompt — all running locally via MediaPipe's LLM Inference
  * API (see the module README for the model file this expects).
+ *
+ * `maxTokens` lives on the engine ([LlmInferenceOptions]); `topK`/`temperature` are
+ * per-session ([LlmInferenceSessionOptions]) — each [answer] call opens and closes its own
+ * short-lived [LlmInferenceSession] against the shared engine so [PowerMode] changes could
+ * later be applied per-call without recreating the (expensive) engine.
  *
  * Mirrors the LangGraph router→handler topology in `packages/study_llm` and iOS's
  * `PolarisStudy.swift`. Unlike the iOS build (Apple Foundation Models' schema-constrained
@@ -19,7 +26,7 @@ import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOp
 class PolarisStudy(
     context: Context,
     modelPath: String,
-    powerMode: PowerMode = PowerMode.NORMAL,
+    private val powerMode: PowerMode = PowerMode.NORMAL,
 ) : AutoCloseable {
 
     data class Answer(val area: PolarisArea, val text: String)
@@ -29,8 +36,6 @@ class PolarisStudy(
         LlmInferenceOptions.builder()
             .setModelPath(modelPath)
             .setMaxTokens(powerMode.maxTokens)
-            .setTopK(powerMode.topK)
-            .setTemperature(powerMode.temperature)
             .build(),
     )
 
@@ -47,12 +52,23 @@ class PolarisStudy(
      * Call this off the main thread (e.g. `Dispatchers.IO`) — inference is not instant.
      */
     fun answer(prompt: String): Answer {
-        val routed = llm.generateResponse("$routerPreamble\nRequest: $prompt\nArea key:")
+        val routed = generate("$routerPreamble\nRequest: $prompt\nArea key:")
         val area = PolarisArea.fromKey(routed.trim().lowercase().substringBefore(' '))
             ?: PolarisArea.ADVISOR
 
-        val response = llm.generateResponse("${area.systemPrompt}\n\n$prompt")
+        val response = generate("${area.systemPrompt}\n\n$prompt")
         return Answer(area, response)
+    }
+
+    private fun generate(prompt: String): String {
+        val sessionOptions = LlmInferenceSessionOptions.builder()
+            .setTopK(powerMode.topK)
+            .setTemperature(powerMode.temperature)
+            .build()
+        LlmInferenceSession.createFromOptions(llm, sessionOptions).use { session ->
+            session.addQueryChunk(prompt)
+            return session.generateResponse()
+        }
     }
 
     /** Release the native LLM resources. Always call when done (or use Kotlin's `use {}`). */

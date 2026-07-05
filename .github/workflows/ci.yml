@@ -68,9 +68,9 @@ jobs:
   ios-build:
     runs-on: macos-latest
     # ios-native/ targets iOS/macOS 26 (Apple Foundation Models). GitHub's macos-latest
-    # runner may not yet ship the Xcode/SDK version this requires — that's an environment
-    # limitation outside this repo's control, so this job reports status without blocking
-    # the rest of CI on it.
+    # runner doesn't reliably ship that SDK yet, so this checks for it first and skips
+    # cleanly (green, with a notice) instead of failing on every run until it's available.
+    # continue-on-error stays on as a safety net in case the detection below is ever wrong.
     continue-on-error: true
     defaults:
       run:
@@ -79,8 +79,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check for an iOS/macOS 26 SDK
+        id: sdkcheck
+        run: |
+          if xcodebuild -showsdks 2>/dev/null | grep -Eqi "(ios|macosx|xros) ?26"; then
+            echo "supported=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "supported=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::This runner's Xcode doesn't ship an iOS/macOS 26 SDK yet, so ios-native/ (Apple Foundation Models, iOS 26+) can't build here. Skipping — see ios-native/README.md. Re-runs will pick it up automatically once GitHub's runner image catches up."
+          fi
+
       - name: swift build
+        if: steps.sdkcheck.outputs.supported == 'true'
         run: swift build
 
       - name: swift test
+        if: steps.sdkcheck.outputs.supported == 'true'
         run: swift test
