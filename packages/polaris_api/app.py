@@ -28,6 +28,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Student-life feature routers (each package owns its own endpoints).
+from clubs.router import router as clubs_router  # noqa: E402
+from planner.router import router as planner_router  # noqa: E402
+from pomodoro.router import router as pomodoro_router  # noqa: E402
+from recall.router import router as recall_router  # noqa: E402
+from syllabus.router import router as syllabus_router  # noqa: E402
+
+for _r in (syllabus_router, planner_router, pomodoro_router, clubs_router, recall_router):
+    app.include_router(_r)
+
+
+class AssistantRequest(BaseModel):
+    question: str
+    kinds: list[str] | None = None
+
+
+@app.post("/assistant/ask", tags=["assistant"])
+def assistant_ask(req: AssistantRequest) -> dict:
+    """Free-API interpreter: retrieve across the vector store and answer."""
+    from assistant.interpret import interpret
+
+    result = interpret(req.question, kinds=req.kinds)
+    used = [{"kind": u.get("kind"), "id": u.get("id")} for u in result.used]
+    return {"answer": result.answer, "used": used}
+
 
 def _save_uploads(files: list[UploadFile]) -> list[str]:
     """Persist uploaded files to a temp dir and return their paths."""
