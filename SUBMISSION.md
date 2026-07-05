@@ -54,9 +54,12 @@ retrieval, plain SQLite for local records) rather than new infrastructure — se
 This isn't a slide — it's a working prototype with tests that don't need a model running
 to verify the scaffolding:
 
-- One-command installers for Windows, macOS/Linux, Android (Termux), and a native iOS
-  package (Apple Foundation Models) — see [`install/`](install/) and
-  [`ios-native/`](ios-native).
+- One-command installers for Windows, macOS/Linux, Android (Termux), and native on-device
+  packages for both iOS (Apple Foundation Models) and Android (MediaPipe LLM Inference) —
+  see [`install/`](install/), [`ios-native/`](ios-native), [`android-native/`](android-native).
+- CI doesn't stop at Python: `.github/workflows/ci.yml` also builds `android-native/`
+  (Gradle) and `ios-native/` (Swift) on every push/PR, so the on-device mobile packages are
+  held to the same "does it actually build" bar as everything else.
 - 26 automated tests (`pytest`, CI on 3.11/3.12/3.13 — see
   [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) covering config, the 6 areas,
   file parsing, exports, Study Packs, and College Planner storage — none require a live

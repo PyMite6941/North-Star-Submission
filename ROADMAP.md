@@ -6,16 +6,20 @@ Status legend: ✅ done · 🚧 scaffolded (stub logic, ready to flesh out) · �
 
 - ✅ Global `POLARIS_LOW_POWER` / `POLARIS_SAVE_MEMORY` settings — swap to a smaller model
   and/or shrink the context window + capped output tokens on constrained devices
-- ⬜ `android-native/` — on-device Android package (MediaPipe LLM Inference, mirrors
-  `ios-native/`'s role), with its own low-power/save-memory config
-- ⬜ CI builds `android-native/` (Gradle) and `ios-native/` (Swift) alongside the Python
+- ✅ `android-native/` — on-device Android package (MediaPipe LLM Inference, mirrors
+  `ios-native/`'s role), with its own `PowerMode` (NORMAL/LOW_POWER/SAVE_MEMORY) tuning —
+  see [`android-native/README.md`](android-native/README.md) for the real device-support
+  trade-offs (high-end-device-optimized today, same as the Termux path's RAM limits)
+- ✅ CI builds `android-native/` (Gradle) and `ios-native/` (Swift) alongside the Python
   ruff+pytest matrix, so a broken mobile build fails the same way a broken Python change
   does
 - ✅ **Discord announcements sync** — read-only, one-way pull of the official Polaris
   Student `#announcements` channel into Study RAG (`polaris rag sync-discord`); see
   [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md) for the
   (Discord-side, admin-only) setup this depends on
-- ⬜ On-device RAG for Android (mirrors the iOS roadmap item below)
+- ⬜ Migrate `android-native/` to LiteRT-LM once Google documents it enough to build
+  against confidently (the officially recommended successor to LLM Inference)
+- ⬜ On-device RAG for Android + iOS
 
 ## Group study + college planning + portable exports
 

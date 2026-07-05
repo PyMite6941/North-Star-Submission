@@ -72,7 +72,8 @@ college deadlines → `.ics` for any calendar app.
 |----------|---------|
 | **Windows** | `powershell -ExecutionPolicy Bypass -File install\install.ps1` |
 | **macOS / Linux** | `./install/install.sh` |
-| **Android (Termux)** | `bash install/android-termux.sh` |
+| **Android — on-device (high-end devices)** | Native Kotlin package — see [`android-native/`](android-native) (MediaPipe LLM Inference) |
+| **Android — Termux (broader hardware support)** | `bash install/android-termux.sh` |
 | **iOS — on-device (recommended)** | Native Swift package — see [`ios-native/`](ios-native) (Apple Foundation Models, iOS 26+) |
 | **iOS — thin client (fallback)** | `REMOTE_HOST=<desktop-ip> sh install/ios-setup.sh` |
 
@@ -81,9 +82,15 @@ desktop) installs Ollama and pulls the models. See [`install/README.md`](install
 for the full platform support matrix and per-OS details.
 
 **Platform notes:**
-- **Windows / macOS / Linux** — full local LLM via Ollama, no API keys.
-- **Android** — works via Termux, but with small models (RAM-limited); the RAG component may
-  need a desktop if `chromadb` won't build.
+- **Windows / macOS / Linux** — full local LLM via Ollama, no API keys. Set
+  `POLARIS_LOW_POWER=true` and/or `POLARIS_SAVE_MEMORY=true` in `.env` on an older machine
+  to trade quality for less CPU/battery/RAM use.
+- **Android** — two tiers, same trade-off as iOS below: the **native Kotlin package in
+  [`android-native/`](android-native)** runs fully on-device via MediaPipe's LLM Inference
+  API, but per Google's own docs it's optimized for high-end devices (Pixel 8 / Galaxy
+  S23-class or newer) and doesn't reliably run on emulators. On a budget/older phone,
+  **Termux** remains the broader-hardware-support fallback (small models, RAM-limited); the
+  RAG component may need a desktop if `chromadb` won't build.
 - **iOS / iPadOS** — the Python stack can't run Ollama on-device, so the proper path is the
   **native Swift package in [`ios-native/`](ios-native)**, which runs the 6 areas on-device with
   Apple's Foundation Models framework (iOS 26+). The `ios-setup.sh` script is a thin-client fallback.
@@ -182,7 +189,8 @@ North Star Submission/
 │   └── polaris_api/        # FastAPI service ([serve] extra)
 ├── webui/                  # Streamlit web UI ([ui] extra)
 ├── tests/                  # smoke tests (run without Ollama)
-├── .github/workflows/      # CI: ruff + pytest on 3.11/3.12/3.13
+├── docs/                   # discord-announcements-sync.md, etc.
+├── .github/workflows/      # CI: ruff+pytest (3.11-3.13) + android-native (Gradle) + ios-native (Swift)
 ├── install/                # cross-platform installers + support matrix
 │   ├── install.ps1         # Windows
 │   ├── install.sh          # macOS / Linux
@@ -190,6 +198,8 @@ North Star Submission/
 │   └── ios-setup.sh        # iOS thin-client fallback
 ├── ios-native/             # iOS ON-DEVICE app (Swift, Apple Foundation Models, iOS 26+)
 │   └── Sources/PolarisStudyKit/   # the 6 areas, on-device (mirrors study_llm)
+├── android-native/         # Android ON-DEVICE app (Kotlin, MediaPipe LLM Inference)
+│   └── polaris-study-kit/  # the 6 areas + PowerMode, on-device (mirrors study_llm)
 ├── local llm model to use for studying offline/   # component 1 docs + runners + Modelfile
 ├── study local notes with vector db/              # component 2 docs + sample notes + runners
 └── fitness agents for use/                        # component 3 docs + agent mds + sample data
@@ -207,12 +217,15 @@ North Star Submission/
 | [ROADMAP.md](ROADMAP.md) | Status of each component and what's next. |
 | [install/README.md](install/README.md) | Per-platform install + the support matrix. |
 | [ios-native/README.md](ios-native/README.md) | On-device iOS via Foundation Models (+ MLX / MLC / llama.cpp options). |
+| [android-native/README.md](android-native/README.md) | On-device Android via MediaPipe LLM Inference — the device-tiering trade-offs and the LiteRT-LM migration note. |
 | [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md) | Pull the official Polaris Student `#announcements` channel into Study RAG — read-only, one-way, and exactly what has to be set up on the Discord side first. |
 
 ## Status
 
-Scaffolded and verified: all packages install (`pip install -e .`), 24 smoke tests pass, ruff
+Scaffolded and verified: all packages install (`pip install -e .`), 26 smoke tests pass, ruff
 clean, and all three LangGraph pipelines (Study LLM, Study RAG, Fitness Agents) run
 end-to-end — College Planner is a fourth, graph-free component (local storage + exports,
 no LLM call needed). Live LLM output needs Ollama running (`ollama serve` + the two
-models). See [ROADMAP.md](ROADMAP.md) for what's stubbed vs. complete.
+models). CI also builds `android-native/` (Gradle) and `ios-native/` (Swift) so the
+on-device mobile packages can't silently bit-rot. See [ROADMAP.md](ROADMAP.md) for what's
+stubbed vs. complete.

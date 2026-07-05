@@ -33,3 +33,54 @@ jobs:
       - name: Pytest
         # Tests are designed to run WITHOUT a live Ollama daemon (LLM calls are not exercised).
         run: pytest
+
+  android-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-native
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      # No wrapper is checked in (avoids committing a binary jar) — Gradle is
+      # provisioned directly by the step above instead of via ./gradlew.
+      - name: Build polaris-study-kit + run its unit tests
+        run: gradle :polaris-study-kit:build
+
+      - name: Build the example app (debug APK)
+        run: gradle :example:assembleDebug
+
+  ios-build:
+    runs-on: macos-latest
+    # ios-native/ targets iOS/macOS 26 (Apple Foundation Models). GitHub's macos-latest
+    # runner may not yet ship the Xcode/SDK version this requires — that's an environment
+    # limitation outside this repo's control, so this job reports status without blocking
+    # the rest of CI on it.
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: ios-native
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: swift build
+        run: swift build
+
+      - name: swift test
+        run: swift test
