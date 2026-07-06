@@ -1,0 +1,20 @@
+# Keep the Cloud Build upload small — only what the Dockerfile needs.
+.git/
+.github/
+.venv/
+**/node_modules/
+**/__pycache__/
+*.egg-info/
+.data/
+.streamlit/
+dist/
+frontend/
+webui/
+ios-native/
+android-native/
+docs/
+tests/
+*.md
+!README.md
+.env
+*.sqlite
