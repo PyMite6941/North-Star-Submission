@@ -60,6 +60,8 @@ offline-embeddings = ["fastembed>=0.4.2"]
 serve = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "python-multipart>=0.0.12"]
 # Streamlit web UI.
 ui = ["streamlit>=1.40"]
+# Cloud LLM fallback (Groq / OpenRouter via the OpenAI-compatible client).
+cloud = ["langchain-openai>=0.2"]
 # Dev tooling.
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8", "mypy>=1.13"]
 
