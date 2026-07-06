@@ -57,7 +57,7 @@ dependencies = [
 # Heavier, fully-offline embedding fallback (ONNX, no model download needed).
 offline-embeddings = ["fastembed>=0.4.2"]
 # FastAPI service layer for exposing the graphs over HTTP.
-serve = ["fastapi>=0.115", "uvicorn[standard]>=0.32"]
+serve = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "python-multipart>=0.0.12"]
 # Streamlit web UI.
 ui = ["streamlit>=1.40"]
 # Dev tooling.
@@ -84,8 +84,9 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
-# Typer uses function calls (typer.Argument/Option) as parameter defaults by design.
+# Typer and FastAPI use function calls (Argument/Option/File/Form) as parameter defaults.
 "**/cli.py" = ["B008"]
+"**/polaris_api/app.py" = ["B008"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

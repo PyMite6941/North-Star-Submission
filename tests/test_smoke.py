@@ -505,5 +505,5 @@ def test_api_app_has_routes():
     pytest.importorskip("fastapi")
     from polaris_api.app import app
 
-    paths = {r.path for r in app.routes}
+    paths = set(app.openapi()["paths"])
     assert {"/health", "/study/ask", "/study/cv", "/rag/ask", "/fitness/analyze"} <= paths

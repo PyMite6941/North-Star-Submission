@@ -160,6 +160,9 @@ pip install -e ".[ui]"
 streamlit run webui/app.py         # one front-end for all three components
 ```
 
+Themed to match **[polarisstudent.com](https://polarisstudent.com)** (firebrick→orange brand,
+constellation-navy header, Plus Jakarta Sans + Inter). Brand tokens live in [THEME.md](THEME.md).
+
 ### HTTP API
 
 ```bash
@@ -215,6 +218,7 @@ North Star Submission/
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design, why the layout, each component's LangGraph topology. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, conventions, how to add an area / agent / file format. |
 | [ROADMAP.md](ROADMAP.md) | Status of each component and what's next. |
+| [THEME.md](THEME.md) | Brand tokens (colors/fonts) matched to polarisstudent.com. |
 | [install/README.md](install/README.md) | Per-platform install + the support matrix. |
 | [ios-native/README.md](ios-native/README.md) | On-device iOS via Foundation Models (+ MLX / MLC / llama.cpp options). |
 | [android-native/README.md](android-native/README.md) | On-device Android via MediaPipe LLM Inference — the device-tiering trade-offs and the LiteRT-LM migration note. |

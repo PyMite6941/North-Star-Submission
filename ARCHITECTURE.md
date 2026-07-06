@@ -31,8 +31,10 @@ and avoids every spaced-path import headache on Windows.
 | `embeddings.py` | `get_embeddings()` — Ollama embeddings by default, fastembed (ONNX) fallback. |
 | `memory.py` | LangGraph SQLite checkpointer factory for resumable, persistent runs. |
 | `logging.py` | Rich-backed structured logging configured from `POLARIS_LOG_LEVEL`. |
+| `console.py` | Shared Rich console; forces UTF-8 stdout so Windows (cp1252) never crashes. |
 
-Every component depends only on `polaris_core` — never on each other.
+`llm.py` also resolves a requested model to an installed tag (bare `llama3.2` →
+`llama3.2:3b`). Every component depends only on `polaris_core` — never on each other.
 
 ## Component graphs (LangGraph)
 
@@ -69,6 +71,8 @@ that feeds straight into the same ingest pipeline. Not part of the query graph; 
 separate, occasional "add a source" step. See
 [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md).
 Chroma persists to disk (`.data/chroma`), so retrieval works fully offline once ingested.
+Ingestion reads `.md/.txt/.rst/.pdf/.docx/.pptx` and is **incremental**: each file's content
+is hashed, so re-ingesting skips unchanged files and upserts (re-indexes) changed ones.
 
 ### 3. Fitness Agents — `fitness_agents`
 A **pipeline of markdown-defined agents**.
@@ -80,6 +84,11 @@ Agent system prompts are markdown files in `fitness agents for use/agent mds/`, 
 runtime by `agents.py`. Parsers (`parsers.py`) normalize `.fit/.tcx/.gpx/.csv/.json` into a
 common `ActivityRecord` schema; `metrics.py` computes distance/pace/HR-zone/load summaries
 that ground the agents in real numbers.
+
+Two extra fitness modules build on this:
+- `history.py` — a SQLite session store; `compute_trends()` derives CTL/ATL/TSB
+  (fitness/fatigue/form) and PRs, which the analyst node reads for progress context.
+- `schedule.py` — structured-output weekly plan (`WeeklySchedule`) with `.ics` export.
 
 ### 4. College Planner — `college_planner`
 
@@ -96,6 +105,26 @@ models.py (CollegeEntry, CourseEntry)  →  storage.py (SQLite CRUD)  →  cli.p
 `calendar_export.py` writes the same hand-rolled RFC 5545 text as
 `fitness_agents/schedule.py`'s `.ics` export, duplicated rather than shared to keep every
 component depending only on `polaris_core`.
+
+### Student-life features (vector-store-backed) — `syllabus`, `planner`, `pomodoro`, `clubs`, `recall`
+
+These newer packages share one Chroma collection (`POLARIS_APP_COLLECTION`) via
+`polaris_core/store.py`, storing each item as an embedded document with structured metadata
+(dates, weights, SM-2 state). This gives every feature semantic search *and* exact
+metadata filtering, and lets the free-API interpreter reason across all of them.
+
+## Interfaces (CLI / API / UI)
+
+The graphs and services are the single source of truth; every interface is a thin wrapper:
+- **`polaris_cli`** — the unified `polaris` command mounts each component's Typer app
+  (`study` / `rag` / `fitness` / `college`) plus `doctor`, `version`, `serve`.
+- **`polaris_api`** — a FastAPI app (`[serve]` extra) exposing `/study`, `/rag`, `/fitness`,
+  the student-life feature routers, and `/health`. Run with `polaris serve`.
+- **`webui/app.py`** — a Streamlit UI (`[ui]` extra); **`frontend/`** — a React + Vite site,
+  both calling the same package functions / API.
+
+Because every interface calls the identical functions, behaviour is consistent across CLI,
+HTTP, and UI.
 
 ## Data flow & persistence
 

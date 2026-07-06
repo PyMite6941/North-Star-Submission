@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     # --- Vector DB (Chroma) ---
     chroma_dir: str = Field(default=".data/chroma", alias="POLARIS_CHROMA_DIR")
     rag_collection: str = Field(default="study_notes", alias="POLARIS_RAG_COLLECTION")
+    # Collection holding the app's own feature data (syllabus, clubs, decks, …).
+    app_collection: str = Field(default="polaris_app", alias="POLARIS_APP_COLLECTION")
     rag_chunk_size: int = Field(default=1000, alias="POLARIS_RAG_CHUNK_SIZE")
     rag_chunk_overlap: int = Field(default=150, alias="POLARIS_RAG_CHUNK_OVERLAP")
     rag_top_k: int = Field(default=4, alias="POLARIS_RAG_TOP_K")
@@ -73,6 +75,15 @@ class Settings(BaseSettings):
     save_memory: bool = Field(default=False, alias="POLARIS_SAVE_MEMORY")
     save_memory_num_ctx: int = Field(default=1024, alias="POLARIS_SAVE_MEMORY_NUM_CTX")
     save_memory_max_tokens: int = Field(default=256, alias="POLARIS_SAVE_MEMORY_MAX_TOKENS")
+
+    # --- RAG behaviour ---
+    rag_max_attempts: int = Field(default=2, alias="POLARIS_RAG_MAX_ATTEMPTS")
+
+    # --- API service (used by `polaris serve` / polaris_api) ---
+    api_host: str = Field(default="127.0.0.1", alias="POLARIS_API_HOST")
+    api_port: int = Field(default=8000, alias="POLARIS_API_PORT")
+    # Comma-separated allowed origins for CORS ("*" = any). Restrict in production.
+    cors_origins: str = Field(default="*", alias="POLARIS_CORS_ORIGINS")
 
     # --- Logging ---
     log_level: str = Field(default="INFO", alias="POLARIS_LOG_LEVEL")
@@ -106,6 +117,10 @@ class Settings(BaseSettings):
     def cloud_fallback_active(self) -> bool:
         """True only when the admin has both configured a key AND flipped the switch on."""
         return self.allow_cloud_fallback and self.has_cloud_fallback
+
+    def cors_origin_list(self) -> list[str]:
+        """CORS origins as a list (['*'] for any)."""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()] or ["*"]
 
     def abspath(self, relative: str) -> Path:
         """Resolve a configured relative path against the repo root and ensure parent dirs."""

@@ -48,8 +48,8 @@ def version() -> None:
 
 @app.command()
 def serve(
-    host: str = typer.Option("127.0.0.1", help="Bind host."),
-    port: int = typer.Option(8000, help="Bind port."),
+    host: str | None = typer.Option(None, help="Bind host (default: POLARIS_API_HOST)."),
+    port: int | None = typer.Option(None, help="Bind port (default: POLARIS_API_PORT)."),
     reload: bool = typer.Option(False, "--reload", help="Auto-reload (dev)."),
 ) -> None:
     """Run the FastAPI service (requires the [serve] extra)."""
@@ -58,6 +58,11 @@ def serve(
     except ImportError:
         console.print('[red]Install the serve extra:[/] pip install -e ".[serve]"')
         raise typer.Exit(1) from None
+    from polaris_core.config import get_settings
+
+    settings = get_settings()
+    host = host or settings.api_host
+    port = port or settings.api_port
     console.print(f"[green]Polaris API →[/] http://{host}:{port}  (docs at /docs)")
     uvicorn.run("polaris_api.app:app", host=host, port=port, reload=reload)
 
