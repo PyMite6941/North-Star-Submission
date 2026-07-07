@@ -57,7 +57,12 @@ dependencies = [
 # Heavier, fully-offline embedding fallback (ONNX, no model download needed).
 offline-embeddings = ["fastembed>=0.4.2"]
 # FastAPI service layer for exposing the graphs over HTTP.
-serve = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "python-multipart>=0.0.12"]
+serve = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "python-multipart>=0.0.12",
+    "upstash-vector>=0.6",
+]
 # Streamlit web UI.
 ui = ["streamlit>=1.40"]
 # Cloud LLM fallback (Groq / OpenRouter via the OpenAI-compatible client).

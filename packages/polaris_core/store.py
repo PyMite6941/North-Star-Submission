@@ -78,8 +78,19 @@ class Record(dict):
     """A stored item: has ``id``, ``kind``, ``text`` and decoded metadata fields."""
 
 
+def _upstash():
+    """Return the Upstash backend module when POLARIS_VECTOR_BACKEND=upstash, else None."""
+    if get_settings().vector_backend == "upstash":
+        from polaris_core import store_upstash
+
+        return store_upstash
+    return None
+
+
 def put(kind: str, text: str, meta: dict[str, Any] | None = None, id: str | None = None) -> str:
     """Insert or update an item of ``kind``. Returns its id."""
+    if (b := _upstash()) is not None:
+        return b.put(kind, text, meta, id)
     rid = id or f"{kind}:{uuid.uuid4().hex[:12]}"
     md = _encode({**(meta or {}), "kind": kind, "updated_at": time.time()})
     _collection().upsert(
@@ -89,6 +100,8 @@ def put(kind: str, text: str, meta: dict[str, Any] | None = None, id: str | None
 
 
 def get(id: str) -> Record | None:
+    if (b := _upstash()) is not None:
+        return b.get(id)
     res = _collection().get(ids=[id], include=["documents", "metadatas"])
     if not res["ids"]:
         return None
@@ -97,6 +110,8 @@ def get(id: str) -> Record | None:
 
 def all(kind: str, where: dict[str, Any] | None = None) -> list[Record]:
     """All items of a kind (optionally filtered by exact metadata)."""
+    if (b := _upstash()) is not None:
+        return b.all(kind, where)
     flt: dict[str, Any] = {"kind": kind}
     if where:
         flt = {"$and": [{"kind": kind}, *[{k: v} for k, v in where.items()]]}
@@ -109,6 +124,8 @@ def all(kind: str, where: dict[str, Any] | None = None) -> list[Record]:
 
 def search(kind: str | None, text: str, k: int = 5) -> list[Record]:
     """Semantic search, optionally scoped to a kind."""
+    if (b := _upstash()) is not None:
+        return b.search(kind, text, k)
     where = {"kind": kind} if kind else None
     res = _collection().query(
         query_embeddings=[_embed(text)],
@@ -123,10 +140,14 @@ def search(kind: str | None, text: str, k: int = 5) -> list[Record]:
 
 
 def delete(id: str) -> None:
+    if (b := _upstash()) is not None:
+        return b.delete(id)
     _collection().delete(ids=[id])
 
 
 def delete_kind(kind: str) -> int:
+    if (b := _upstash()) is not None:
+        return b.delete_kind(kind)
     items = all(kind)
     if items:
         _collection().delete(ids=[r["id"] for r in items])
