@@ -41,6 +41,25 @@ def test_workload_effort_ranking():
     assert _effort({"type": "assignment", "weight_pct": 40}) > _effort({"type": "assignment"})
 
 
+def test_vector_backend_dispatch(monkeypatch):
+    """store delegates to the Upstash backend when POLARIS_VECTOR_BACKEND=upstash."""
+    from polaris_core import store
+
+    calls = {}
+
+    def fake_put(*a, **k):
+        calls["put"] = a
+        return "id1"
+
+    fake = type("M", (), {"put": staticmethod(fake_put)})
+    monkeypatch.setattr(store, "_upstash", lambda: fake)
+    assert store.put("club", "text", {"name": "x"}) == "id1"
+    assert "put" in calls  # routed to the managed backend, not Chroma
+
+    monkeypatch.setattr(store, "_upstash", lambda: None)  # default path still exists
+    assert store._upstash() is None
+
+
 def test_feature_routers_registered():
     """The API mounts every student-life router (skips if fastapi absent)."""
     import pytest

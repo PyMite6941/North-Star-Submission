@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     rag_collection: str = Field(default="study_notes", alias="POLARIS_RAG_COLLECTION")
     # Collection holding the app's own feature data (syllabus, clubs, decks, …).
     app_collection: str = Field(default="polaris_app", alias="POLARIS_APP_COLLECTION")
+    # Vector backend for the app store: "chroma" (local/GCS) or "upstash" (managed, serverless).
+    vector_backend: Literal["chroma", "upstash"] = Field(
+        default="chroma", alias="POLARIS_VECTOR_BACKEND"
+    )
+    upstash_vector_url: str = Field(default="", alias="UPSTASH_VECTOR_REST_URL")
+    upstash_vector_token: str = Field(default="", alias="UPSTASH_VECTOR_REST_TOKEN")
     rag_chunk_size: int = Field(default=1000, alias="POLARIS_RAG_CHUNK_SIZE")
     rag_chunk_overlap: int = Field(default=150, alias="POLARIS_RAG_CHUNK_OVERLAP")
     rag_top_k: int = Field(default=4, alias="POLARIS_RAG_TOP_K")

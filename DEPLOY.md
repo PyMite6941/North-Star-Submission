@@ -66,7 +66,23 @@ vercel --prod        # first run links the project; subsequent runs redeploy
 
 After that, every push to `master` redeploys the frontend automatically.
 
-## Known limitation
-Cloud Run scales to zero; with the GCS mount, data persists, but heavy concurrent writes
-are constrained to one instance. For higher scale, move the vector store to a managed vector
-DB (Upstash Vector / Qdrant Cloud) via a new `polaris_core/store.py` backend.
+## Scaling the vector store (managed DB)
+The GCS-mounted Chroma persists but pins writes to one instance. For higher scale, switch to
+**Upstash Vector** (managed, serverless) — the backend is already implemented
+(`polaris_core/store_upstash.py`); activation is config-only:
+
+1. Create a free index at **console.upstash.com** → Vector → new index, **dimension 384**,
+   **metric cosine** (matches the fastembed `BAAI/bge-small-en-v1.5` embeddings).
+2. Point the backend at it and drop the single-instance pin:
+   ```bash
+   gcloud run services update polaris-api --project project-3758abef-d8d2-488a-b35 --region us-central1 \
+     --set-env-vars POLARIS_VECTOR_BACKEND=upstash,UPSTASH_VECTOR_REST_URL=...,UPSTASH_VECTOR_REST_TOKEN=... \
+     --clear-volume-mounts --clear-volumes --max-instances 3
+   ```
+
+Chroma remains the default (`POLARIS_VECTOR_BACKEND=chroma`), so nothing changes until you flip it.
+
+## Frontend auto-deploy (GitHub Actions)
+`.github/workflows/deploy-frontend.yml` redeploys the frontend to Vercel on every push to
+`master` that touches `frontend/**` — using repo secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+`VERCEL_PROJECT_ID` (already set). No Vercel GitHub App required.
