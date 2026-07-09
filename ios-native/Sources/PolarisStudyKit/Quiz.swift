@@ -29,8 +29,9 @@ public enum QuizEngine {
         }
     }
 
-    /// Is a free-text answer correct? Accepts near-matches (default 85% similarity).
-    public static func isCorrect(_ given: String, answer: String, threshold: Double = 0.85) -> Bool {
+    /// Is a free-text answer correct? Accepts near-matches
+    /// (default 80% similarity — tolerant of typos / singular-plural).
+    public static func isCorrect(_ given: String, answer: String, threshold: Double = 0.80) -> Bool {
         similarity(normalize(given), normalize(answer)) >= threshold
     }
 

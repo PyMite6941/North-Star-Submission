@@ -25,8 +25,8 @@ object QuizEngine {
         }
     }
 
-    /** Accepts near-matches (default 85% similarity). */
-    fun isCorrect(given: String, answer: String, threshold: Double = 0.85): Boolean =
+    /** Accepts near-matches (default 80% similarity — tolerant of typos / singular-plural). */
+    fun isCorrect(given: String, answer: String, threshold: Double = 0.80): Boolean =
         similarity(normalize(given), normalize(answer)) >= threshold
 
     /** 1 - edit distance / max length. 1.0 == identical. */
