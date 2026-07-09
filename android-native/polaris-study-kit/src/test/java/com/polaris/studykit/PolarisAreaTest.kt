@@ -77,3 +77,25 @@ class QuizAndFlashcardTest {
         assertTrue(r.words > 0)
     }
 }
+
+class WritingCheckerTest {
+
+    @Test
+    fun `flags wordiness, weasel words and repeats offline`() {
+        val issues = WritingChecker.check("In order to win, be very very careful.")
+        assertTrue(issues.any { it.matched.equals("in order to", true) && it.suggestion == "to" })
+        assertTrue(issues.any { it.message.contains("Weak intensifier") })
+        assertTrue(issues.any { it.message.contains("Repeated word") })
+        assertTrue(issues.all { it.start in 0..it.end && it.end <= 39 })
+    }
+
+    @Test
+    fun `clean prose scores higher than messy prose`() {
+        val clean = "The cell makes energy. Light drives the reaction."
+        val messy = "In order to make energy, the the cell is very very clearly used " +
+            "due to the fact that light."
+        val cleanScore = WritingChecker.check(clean).let { WritingChecker.score(clean, it) }
+        val messyScore = WritingChecker.check(messy).let { WritingChecker.score(messy, it) }
+        assertTrue(cleanScore > messyScore)
+    }
+}

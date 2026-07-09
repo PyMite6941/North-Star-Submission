@@ -26,6 +26,22 @@ export function Output({ text, error }: { text?: string; error?: string }) {
   return <div className="output">{text}</div>;
 }
 
+/** Tracks online/offline state (browser connectivity). Polly features gate on this. */
+export function useOnline(): boolean {
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+  return online;
+}
+
 /** Live backend/Ollama status pill (polls /health once). */
 export function BackendStatus() {
   const [h, setH] = useState<Health | null>(null);

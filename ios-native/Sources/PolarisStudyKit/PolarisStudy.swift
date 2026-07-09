@@ -46,6 +46,14 @@ public struct PolarisStudy: Sendable {
         Readability.analyze(text)
     }
 
+    // MARK: Writing checker (offline). The AI coach "Polly" is ONLINE-ONLY — call its API
+    // (`/writing/coach`, `/writing/polish`) only when the device has connectivity; this
+    // rule-based checker always works, on-device, with no network.
+    public func checkWriting(_ text: String) -> (issues: [WritingIssue], score: Int) {
+        let issues = WritingChecker.check(text)
+        return (issues, WritingChecker.score(text, issues: issues))
+    }
+
     // MARK: CV Builder (template)
     public struct Resume: Sendable {
         public var name = "", contact = "", summary = ""

@@ -42,6 +42,14 @@ class PolarisStudy {
     // Essay
     fun analyzeWriting(text: String): ReadabilityReport = Readability.analyze(text)
 
+    // Writing checker (offline). The AI coach "Polly" is ONLINE-ONLY — call its API
+    // (/writing/coach, /writing/polish) only when the device has connectivity; this rule-based
+    // checker always works, on-device, with no network.
+    fun checkWriting(text: String): Pair<List<WritingIssue>, Int> {
+        val issues = WritingChecker.check(text)
+        return issues to WritingChecker.score(text, issues)
+    }
+
     // CV Builder (template)
     data class Resume(
         val name: String = "",

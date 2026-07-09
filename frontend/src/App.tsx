@@ -12,10 +12,12 @@ const Planner = lazy(() => import("./pages/Planner"));
 const Pomodoro = lazy(() => import("./pages/Pomodoro"));
 const Clubs = lazy(() => import("./pages/Clubs"));
 const Recall = lazy(() => import("./pages/Recall"));
+const Writing = lazy(() => import("./pages/Writing"));
 
 const LINKS = [
   { to: "/study", label: "Study" },
   { to: "/recall", label: "Recall" },
+  { to: "/writing", label: "Writing" },
   { to: "/notes", label: "Notes" },
   { to: "/planner", label: "Planner" },
   { to: "/pomodoro", label: "Focus" },
@@ -48,6 +50,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/study" element={<Study />} />
             <Route path="/recall" element={<Recall />} />
+            <Route path="/writing" element={<Writing />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/planner" element={<Planner />} />
             <Route path="/pomodoro" element={<Pomodoro />} />

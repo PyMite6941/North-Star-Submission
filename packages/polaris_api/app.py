@@ -34,8 +34,11 @@ from planner.router import router as planner_router  # noqa: E402
 from pomodoro.router import router as pomodoro_router  # noqa: E402
 from recall.router import router as recall_router  # noqa: E402
 from syllabus.router import router as syllabus_router  # noqa: E402
+from writing.router import router as writing_router  # noqa: E402
 
-for _r in (syllabus_router, planner_router, pomodoro_router, clubs_router, recall_router):
+for _r in (
+    syllabus_router, planner_router, pomodoro_router, clubs_router, recall_router, writing_router
+):
     app.include_router(_r)
 
 
