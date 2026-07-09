@@ -11,24 +11,18 @@ runs where.
 | **Windows** | ✅ full | `install\install.ps1` | Auto-installs Python + Ollama via winget if missing. |
 | **macOS** | ✅ full | `install/install.sh` | Apple Silicon runs local models very well. |
 | **Linux** | ✅ full | `install/install.sh` | Uses the official Ollama install script. |
-| **Android** (native) | ✅ on-device, high-end only | [`android-native/`](../android-native) | Runs on-device via MediaPipe LLM Inference — per Google's docs, optimized for high-end devices (Pixel 8 / Galaxy S23-class+), not reliable on emulators. |
-| **Android** (Termux) | ⚠️ limited | `install/android-termux.sh` | Broader hardware support than the native path; small models only (RAM/CPU limited). |
-| **iOS / iPadOS** (native) | ✅ on-device | [`ios-native/`](../ios-native) | **Recommended.** Runs on-device via Apple Foundation Models (iOS 26+). No Ollama needed. |
-| **iOS / iPadOS** (scripted) | ❌ not on-device | `install/ios-setup.sh` | Fallback: Python sandbox blocks Ollama, so it runs as a **thin client** (LAN or cloud). |
+| **Android** (native) | ✅ any device | [`android-native/`](../android-native) | **Recommended.** Kotlin study kit — classical algorithms, **no AI**, no model, no network. |
+| **iOS / iPadOS** (native) | ✅ any device | [`ios-native/`](../ios-native) | **Recommended.** Swift study kit — classical algorithms, **no AI**, iOS 15+. |
+| **Web** | ✅ deployed | [`frontend/`](../frontend) | React app on Vercel → Cloud Run backend (fastembed + Groq). |
+| **Android / iOS** (LLM via desktop) | ⚠️ optional | `install/android-termux.sh` · `install/ios-setup.sh` | Only if you want the *LLM* features on mobile: Termux runs Ollama on-device (RAM-limited); `ios-setup.sh` is a thin client to a desktop/cloud backend. |
 
-Legend: ✅ full local LLM · ⚠️ works but constrained · ❌ no on-device daemon.
+Legend: ✅ full features · ⚠️ optional/constrained.
 
-> **iOS note:** you cannot run Ollama (or the Python RAG stack) on-device. The proper
-> on-device path is the native Swift package in [`ios-native/`](../ios-native), which uses
-> Apple's Foundation Models framework. The `ios-setup.sh` script below is the no-native-build
-> fallback (thin client to a desktop or the cloud).
-
-> **Android note:** unlike iOS 26+, there's no system-provided model, so the native path
-> in [`android-native/`](../android-native) bundles a small model file instead — and per
-> Google's own docs it's tuned for recent high-end hardware. On a budget/older phone,
-> Termux (broader hardware support, smaller models) is the more realistic path; either way,
-> set `POLARIS_LOW_POWER=true` / `POLARIS_SAVE_MEMORY=true` (Termux) or `PowerMode.SAVE_MEMORY`
-> (native) to push a struggling device further.
+> **Mobile note:** the native apps are **AI-free** — every study feature is a deterministic
+> algorithm (SM-2, Levenshtein, Flesch–Kincaid, rule-table citations), so they run instantly on
+> any device with no model download. The only online feature is **Polly** (the AI writing coach),
+> which the app calls over the network only when connected. The Termux / `ios-setup.sh` scripts
+> are only needed if you specifically want the *LLM*-powered experience on a phone.
 
 ---
 
@@ -58,16 +52,14 @@ polaris-study doctor
 
 ## Android
 
-### Recommended (high-end devices): native on-device (`android-native/`)
+### Recommended: native app (`android-native/`)
 
-The Kotlin package in [`android-native/`](../android-native) runs a small quantized model
-(Gemma 3 1B) entirely on-device via MediaPipe's LLM Inference API — no Ollama, no network.
-Per Google's own docs it's tuned for recent high-end hardware (Pixel 8 / Galaxy S23-class
-or newer) and isn't reliable on emulators. See that package's README for the full
-device-support trade-offs, the model-file setup (`adb push`), and `PowerMode` for tuning it
-down on a device that still struggles.
+The Kotlin study kit in [`android-native/`](../android-native) runs every study feature with
+**classical algorithms — no AI, no model, no network** — so it works instantly on **any** device
+(no high-end/NPU requirement, works on emulators). See that package's README for the algorithm
+list (SM-2, Levenshtein, Flesch–Kincaid, rule-table citations) and usage.
 
-### Broader hardware support: Termux
+### Optional: LLM features on-device via Termux
 
 Install **Termux from F-Droid** (the Play Store build is outdated). Then:
 
@@ -87,24 +79,22 @@ bash install/android-termux.sh
 
 ## iOS / iPadOS
 
-### Recommended: native on-device (`ios-native/`)
+### Recommended: native app (`ios-native/`)
 
-iOS **cannot** run Ollama, but it *can* run a model on-device through Apple's **Foundation
-Models** framework (iOS 26+). The Swift package in [`ios-native/`](../ios-native) implements the
-6 Polaris areas locally — no Ollama, no network, no download. Add it to an iOS 26 app target:
+The Swift study kit in [`ios-native/`](../ios-native) runs every study feature with **classical
+algorithms — no AI, no network, no download** — on **iOS 15+** (no Apple-Intelligence requirement):
 
 ```swift
 import PolarisStudyKit
-let result = try await PolarisStudy().answer(to: "Quiz me on the French Revolution")
+let cards = PolarisStudy().makeFlashcards(from: notes)   // SM-2 + cloze generation, instant
 ```
 
-See [`ios-native/README.md`](../ios-native/README.md) (also covers MLX Swift / MLC / llama.cpp
-if you need to run your own model instead of Apple's).
+See [`ios-native/README.md`](../ios-native/README.md) for the full algorithm list.
 
-### Fallback: thin client (`ios-setup.sh`)
+### Optional: LLM features via a desktop/cloud backend (`ios-setup.sh`)
 
-If you can't ship a native build, the Python app runs as a **thin client** in one of two modes,
-configured from the **a-Shell** app:
+If you specifically want the *LLM*-powered features on iOS, the Python app runs as a **thin
+client** in one of two modes, configured from the **a-Shell** app:
 
 **(A) LAN mode** — use Ollama on your Mac/PC over Wi-Fi:
 ```sh
@@ -120,10 +110,9 @@ USE_CLOUD=1 sh install/ios-setup.sh
 # then edit .env: set GROQ_API_KEY or OPENROUTER_API_KEY
 ```
 
-> **Shipping a real iOS app?** Bundle a small model on-device with
-> [MLC LLM](https://llm.mlc.ai/) or [llama.cpp](https://github.com/ggerganov/llama.cpp)
-> in a native Swift app. That's a build target, not a script — this scaffold's Python
-> graphs would back the LAN/cloud client or be ported to the native runtime.
+> **Shipping a real mobile app?** Use the native kits (`ios-native/` / `android-native/`) — they're
+> AI-free and need no model, so there's nothing to bundle. Add the online **Polly** coach via the
+> `/writing/coach` API when the device has connectivity.
 
 ---
 

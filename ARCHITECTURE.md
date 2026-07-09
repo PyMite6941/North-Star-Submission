@@ -111,7 +111,24 @@ component depending only on `polaris_core`.
 These newer packages share one Chroma collection (`POLARIS_APP_COLLECTION`) via
 `polaris_core/store.py`, storing each item as an embedded document with structured metadata
 (dates, weights, SM-2 state). This gives every feature semantic search *and* exact
-metadata filtering, and lets the free-API interpreter reason across all of them.
+metadata filtering, and lets the free-API interpreter reason across all of them. A drop-in
+**Upstash Vector** backend (`store_upstash.py`, selected by `POLARIS_VECTOR_BACKEND`) swaps the
+local store for a managed one without touching callers.
+
+### Writing — `writing` (two tiers)
+
+- **`check`** (rules, no AI) — regex + lookup tables produce located grammar/style/clarity
+  issues, plus Flesch–Kincaid readability and a density-weighted 0–100 score. Offline-capable;
+  the same rules are mirrored in the mobile `WritingChecker` (Swift/Kotlin).
+- **Polly** (`coach` / `polish`, **online-only**) — the LLM writing coach: structured `fix`/`add`
+  notes ("where + why") and a full rewrite. The clients (web `useOnline`, mobile connectivity)
+  call it only when online.
+
+### Native mobile — algorithms, not AI
+
+`ios-native/` (Swift) and `android-native/` (Kotlin) deliberately do **not** use an on-device LLM.
+Each study feature is a deterministic algorithm — SM-2, Levenshtein, Flesch–Kincaid, rule-table
+citations, template CV — mirroring the Python logic so behaviour matches, but instant and offline.
 
 ## Interfaces (CLI / API / UI)
 

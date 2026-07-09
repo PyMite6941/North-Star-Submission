@@ -2,24 +2,40 @@
 
 Status legend: ✅ done · 🚧 scaffolded (stub logic, ready to flesh out) · ⬜ planned
 
-## On-device LLM everywhere + power modes + Discord sync
+## Native mobile — classical algorithms, not AI
 
-- ✅ Global `POLARIS_LOW_POWER` / `POLARIS_SAVE_MEMORY` settings — swap to a smaller model
-  and/or shrink the context window + capped output tokens on constrained devices
-- ✅ `android-native/` — on-device Android package (MediaPipe LLM Inference, mirrors
-  `ios-native/`'s role), with its own `PowerMode` (NORMAL/LOW_POWER/SAVE_MEMORY) tuning —
-  see [`android-native/README.md`](android-native/README.md) for the real device-support
-  trade-offs (high-end-device-optimized today, same as the Termux path's RAM limits)
-- ✅ CI builds `android-native/` (Gradle) and `ios-native/` (Swift) alongside the Python
-  ruff+pytest matrix, so a broken mobile build fails the same way a broken Python change
-  does
+- ✅ Both native kits (`ios-native/` Swift, `android-native/` Kotlin) implement every study
+  feature with **deterministic algorithms** — no on-device LLM, no model download, no network,
+  no Apple-Intelligence requirement. Instant, private, and free on any device.
+- ✅ Flashcards **SM-2** · Quizzing **Levenshtein** grading + **Leitner** · Citations rule-table
+  (APA/MLA/Chicago) · Essay/Writing **Flesch–Kincaid** + rule-based checker · CV template ·
+  Advisor rule-based scheduler
+- ✅ Offline **WritingChecker** on both platforms; the AI coach **Polly** is called only when online
+- ✅ CI builds `android-native/` (Gradle, incl. Kotlin algorithm tests) and `ios-native/` (Swift)
+  alongside the Python ruff+pytest matrix, so a broken mobile build fails like a Python change does
 - ✅ **Discord announcements sync** — read-only, one-way pull of the official Polaris
-  Student `#announcements` channel into Study RAG (`polaris rag sync-discord`); see
-  [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md) for the
-  (Discord-side, admin-only) setup this depends on
-- ⬜ Migrate `android-native/` to LiteRT-LM once Google documents it enough to build
-  against confidently (the officially recommended successor to LLM Inference)
-- ⬜ On-device RAG for Android + iOS
+  Student `#announcements` channel into Study RAG; see
+  [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md)
+- ⬜ On-device RAG (semantic notes search) for Android + iOS
+
+## Student-life tools (algorithm-backed + optional AI)
+
+- ✅ **Recall** — SM-2 spaced repetition (decks/cards/review), AI-generated or manual decks
+- ✅ **Writing** — offline rule checker (grammar/style/clarity + readability + score) **+ Polly**,
+  the online-only AI coach that shows where to **fix and add** content with reasons + full rewrite
+- ✅ **Syllabus** import (PDF/DOCX/PPTX) → courses/assignments in the vector store
+- ✅ **Planner** — workload detection (heavy-week flags) + AI weekly plan
+- ✅ **Pomodoro** (focus stats/streak) · **Clubs** hub (semantic search) · **Assistant** interpreter
+- ✅ Shared **Chroma** vector store (`polaris_core/store.py`) + drop-in **Upstash Vector** backend
+- ⬜ Notes/notifications sync across devices
+
+## Web app + deployment
+
+- ✅ **React + Vite** web app (`frontend/`) — lazy-code-split pages for every feature, themed to
+  polarisstudent.com, with offline detection (`useOnline`) that gates Polly
+- ✅ **Deployed**: frontend on **Vercel** (public), backend on **Cloud Run** (fastembed + Groq,
+  GCS-backed persistent store); frontend **auto-deploys on push** via GitHub Actions
+- ⬜ Custom domain + backend behind it
 
 ## Group study + college planning + portable exports
 
@@ -84,9 +100,9 @@ without a cloud account.
 - ✅ Unified `polaris` CLI (mounts study / rag / fitness / college + `doctor`, `version`, `serve`)
 - ✅ Model-tag auto-resolution (bare `llama3.2` → installed `llama3.2:3b`)
 - ✅ UTF-8-safe output on Windows (CLIs + runner scripts)
-- ✅ FastAPI service layer (`[serve]` extra) exposing all three graphs
-- ✅ Streamlit web UI (`[ui]` extra) — single front-end for all three, with an admin-only
-  sidebar (resolved settings + a gated cloud-fallback toggle)
+- ✅ FastAPI service layer (`[serve]` extra) — mounts every feature router (study, rag, fitness,
+  recall, writing, syllabus, planner, pomodoro, clubs, assistant)
+- ✅ Streamlit web UI (`[ui]` extra) — admin sidebar with resolved settings + gated cloud toggle
 - ✅ `polaris config show` — inspect resolved settings (secrets masked)
 - ✅ Fail-fast settings validation (`POLARIS_EMBED_BACKEND` typos reject at startup)
 - ✅ `POLARIS_UNITS` (metric/imperial) for fitness output
