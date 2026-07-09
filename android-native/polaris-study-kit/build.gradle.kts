@@ -22,9 +22,7 @@ android {
 }
 
 dependencies {
-    // On-device LLM runtime. Optimized for high-end devices today (Pixel 8 / Galaxy S23+
-    // class) — see README for the device-tiering story and the LiteRT-LM migration note.
-    implementation("com.google.mediapipe:tasks-genai:0.10.27")
-
+    // No AI/LLM runtime — every feature is a pure Kotlin algorithm (SM-2, Levenshtein,
+    // rule-table citations, Flesch–Kincaid). Nothing to download; runs on any device.
     testImplementation("junit:junit:4.13.2")
 }
