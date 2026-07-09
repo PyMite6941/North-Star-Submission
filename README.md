@@ -223,6 +223,7 @@ North Star Submission/
 | [ios-native/README.md](ios-native/README.md) | On-device iOS via Foundation Models (+ MLX / MLC / llama.cpp options). |
 | [android-native/README.md](android-native/README.md) | On-device Android via MediaPipe LLM Inference — the device-tiering trade-offs and the LiteRT-LM migration note. |
 | [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md) | Pull the official Polaris Student `#announcements` channel into Study RAG — read-only, one-way, and exactly what has to be set up on the Discord side first. |
+| [docs/polly-persona-prompt.md](docs/polly-persona-prompt.md) | Candidate system prompt for the Polly Bot AI study companion persona, plus a `scripts/polly_persona_chat.py` harness for testing it against Groq. |
 
 ## Status
 
