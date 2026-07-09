@@ -131,8 +131,45 @@ export interface Card {
   due?: string;
 }
 
+// ---- Writing assistant ----
+export interface WritingIssue {
+  start: number;
+  end: number;
+  type: string;
+  message: string;
+  suggestion?: string | null;
+  matched: string;
+}
+export interface WritingReport {
+  issues: WritingIssue[];
+  words: number;
+  sentences: number;
+  flesch_reading_ease: number;
+  flesch_kincaid_grade: number;
+  score: number;
+  counts: Record<string, number>;
+}
+export interface CoachNote {
+  kind: string; // 'fix' | 'add'
+  anchor: string;
+  issue: string;
+  why: string;
+  suggestion: string;
+}
+export interface CoachReport {
+  summary: string;
+  notes: CoachNote[];
+}
+
 export const api = {
   health: () => jget<Health>("/health"),
+
+  // --- writing (rule check = offline-capable; Polly coach/polish = online only) ---
+  writingCheck: (text: string) => jpost<WritingReport>("/writing/check", { text }),
+  pollyCoach: (text: string) => jpost<CoachReport>("/writing/coach", { text }),
+  pollyPolish: (text: string, tone = "neutral") =>
+    jpost<{ rewrite: string }>("/writing/polish", { text, tone }),
+
 
   // --- syllabus ---
   syllabusImport: (files: File[]) => upload<Record<string, unknown>>("/syllabus/import-upload", files),

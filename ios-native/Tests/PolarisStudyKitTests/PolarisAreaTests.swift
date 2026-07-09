@@ -50,3 +50,13 @@ import Foundation
     let r = Readability.analyze(text)
     #expect(r.words > 0 && r.sentences == 2 && r.fleschReadingEase != 0)
 }
+
+@Test func writingCheckerRunsOffline() {
+    let issues = WritingChecker.check("In order to win, be very very careful.")
+    #expect(issues.contains { $0.suggestion == "to" })              // wordiness
+    #expect(issues.contains { $0.message.contains("Weak intensifier") })
+    #expect(issues.contains { $0.message.contains("Repeated word") })
+    let clean = WritingChecker.check("The cell makes energy.")
+    #expect(WritingChecker.score("The cell makes energy.", issues: clean)
+        > WritingChecker.score("In order to win, be very very careful.", issues: issues))
+}
