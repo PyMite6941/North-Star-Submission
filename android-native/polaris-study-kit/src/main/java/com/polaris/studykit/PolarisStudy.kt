@@ -1,78 +1,85 @@
 package com.polaris.studykit
 
-import android.content.Context
-import com.google.mediapipe.tasks.genai.llminference.LlmInference
-import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOptions
-import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
-import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession.LlmInferenceSessionOptions
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+import kotlin.math.roundToInt
 
 /**
- * On-device study assistant: routes a request to one of the six Polaris areas, then answers
- * with that area's specialized prompt — all running locally via MediaPipe's LLM Inference
- * API (see the module README for the model file this expects).
+ * PolarisStudy — the on-device study toolkit, powered entirely by **classical algorithms,
+ * not AI**. Every feature is deterministic, offline, instant, and unit-tested:
  *
- * `maxTokens` lives on the engine ([LlmInferenceOptions]); `topK`/`temperature` are
- * per-session ([LlmInferenceSessionOptions]) — each [answer] call opens and closes its own
- * short-lived [LlmInferenceSession] against the shared engine so [PowerMode] changes could
- * later be applied per-call without recreating the (expensive) engine.
+ * | Area        | Algorithm |
+ * |-------------|-----------|
+ * | Flashcards  | SM-2 spaced repetition + cloze/definition generation |
+ * | Quizzing    | MCQ generation + Levenshtein grading + Leitner boxes |
+ * | Citation    | Rule-table formatter (APA / MLA / Chicago) |
+ * | Essay       | Flesch–Kincaid readability + structural heuristics |
+ * | CV Builder  | Template rendering |
+ * | Advisor     | Rule-based deadline + spacing study scheduler |
  *
- * Mirrors the LangGraph router→handler topology in `packages/study_llm` and iOS's
- * `PolarisStudy.swift`. Unlike the iOS build (Apple Foundation Models' schema-constrained
- * guided generation), this API has no structured-output mode, so routing asks the model to
- * reply with a single area key and validates it against [PolarisArea], falling back to
- * [PolarisArea.ADVISOR] on anything unparseable — the same safe default the Python router
- * uses when its own classification step fails.
+ * No model file, no MediaPipe, no network — nothing to download and it runs on any device.
+ * All calls are cheap and synchronous (no [AutoCloseable], no background thread required).
  */
-class PolarisStudy(
-    context: Context,
-    modelPath: String,
-    private val powerMode: PowerMode = PowerMode.NORMAL,
-) : AutoCloseable {
+class PolarisStudy {
 
-    data class Answer(val area: PolarisArea, val text: String)
+    // Flashcards (SM-2)
+    fun makeFlashcards(text: String, limit: Int = 20): List<Flashcard> =
+        FlashcardGenerator.generate(text, limit)
 
-    private val llm: LlmInference = LlmInference.createFromOptions(
-        context,
-        LlmInferenceOptions.builder()
-            .setModelPath(modelPath)
-            .setMaxTokens(powerMode.maxTokens)
-            .build(),
+    fun review(state: Sm2State, grade: Int, today: Long = LocalDate.now().toEpochDay()): Sm2State =
+        SpacedRepetition.schedule(state, grade, today)
+
+    // Quizzing
+    fun makeQuiz(cards: List<Flashcard>, choices: Int = 4): List<QuizQuestion> =
+        QuizEngine.multipleChoice(cards, choices)
+
+    fun grade(given: String, answer: String): Boolean = QuizEngine.isCorrect(given, answer)
+
+    // Citation
+    fun citation(source: Source, style: CitationStyle): Pair<String, String> =
+        Citations.reference(source, style) to Citations.inText(source, style)
+
+    // Essay
+    fun analyzeWriting(text: String): ReadabilityReport = Readability.analyze(text)
+
+    // CV Builder (template)
+    data class Resume(
+        val name: String = "",
+        val contact: String = "",
+        val summary: String = "",
+        val experience: List<String> = emptyList(),
+        val education: List<String> = emptyList(),
+        val skills: List<String> = emptyList(),
     )
 
-    private val routerPreamble = buildString {
-        appendLine("You route a student's request to exactly one capability area.")
-        appendLine("Reply with ONLY the area key, nothing else. Areas:")
-        for (area in PolarisArea.entries) {
-            appendLine("- ${area.key}: ${area.summary}")
+    fun buildCV(r: Resume): String {
+        val out = mutableListOf("# ${r.name}")
+        if (r.contact.isNotEmpty()) out.add(r.contact)
+        if (r.summary.isNotEmpty()) out.addAll(listOf("", "## Summary", r.summary))
+        fun section(title: String, items: List<String>) {
+            if (items.isEmpty()) return
+            out.add(""); out.add("## $title"); out.addAll(items.map { "- $it" })
         }
+        section("Experience", r.experience)
+        section("Education", r.education)
+        if (r.skills.isNotEmpty()) out.addAll(listOf("", "## Skills", r.skills.joinToString(" · ")))
+        return out.joinToString("\n")
     }
+
+    // Advisor (rule-based scheduler)
+    data class Deadline(val title: String, val due: LocalDate, val weightPct: Double = 0.0)
+    data class PlanItem(val title: String, val start: LocalDate, val priority: Double)
 
     /**
-     * Route the prompt to an area, then generate the answer — fully on-device, blocking.
-     * Call this off the main thread (e.g. `Dispatchers.IO`) — inference is not instant.
+     * Prioritize upcoming work by urgency × importance — no AI.
+     * priority = weight / max(1, days-until-due); heavier items start sooner (front-loading).
      */
-    fun answer(prompt: String): Answer {
-        val routed = generate("$routerPreamble\nRequest: $prompt\nArea key:")
-        val area = PolarisArea.fromKey(routed.trim().lowercase().substringBefore(' '))
-            ?: PolarisArea.ADVISOR
-
-        val response = generate("${area.systemPrompt}\n\n$prompt")
-        return Answer(area, response)
-    }
-
-    private fun generate(prompt: String): String {
-        val sessionOptions = LlmInferenceSessionOptions.builder()
-            .setTopK(powerMode.topK)
-            .setTemperature(powerMode.temperature)
-            .build()
-        LlmInferenceSession.createFromOptions(llm, sessionOptions).use { session ->
-            session.addQueryChunk(prompt)
-            return session.generateResponse()
-        }
-    }
-
-    /** Release the native LLM resources. Always call when done (or use Kotlin's `use {}`). */
-    override fun close() {
-        llm.close()
-    }
+    fun advise(deadlines: List<Deadline>, now: LocalDate = LocalDate.now()): List<PlanItem> =
+        deadlines.map { d ->
+            val days = ChronoUnit.DAYS.between(now, d.due).coerceAtLeast(1)
+            val priority = (if (d.weightPct > 0) d.weightPct else 10.0) / days
+            val lead = ((d.weightPct / 20).roundToInt() + 1).toLong().coerceAtMost(days)
+            val start = maxOf(now, d.due.minusDays(lead))
+            PlanItem(d.title, start, priority)
+        }.sortedByDescending { it.priority }
 }

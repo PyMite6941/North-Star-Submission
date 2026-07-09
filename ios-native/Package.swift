@@ -1,15 +1,16 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.0
 import PackageDescription
 
-// PolarisStudyKit — on-device implementation of the 6 Polaris areas for iOS/iPadOS/macOS
-// using Apple's Foundation Models framework (iOS 26+). This is the on-device alternative to
-// the Python thin-client path: the model runs entirely on the device, no Ollama, no network.
+// PolarisStudyKit — an on-device study toolkit for iOS/iPadOS/macOS built on classical,
+// deterministic ALGORITHMS (no AI): SM-2 spaced repetition, cloze flashcard generation,
+// Levenshtein grading, rule-table citation formatting, and Flesch–Kincaid readability.
+// No model download, no network, no Apple-Intelligence requirement — runs on any modern OS.
 let package = Package(
     name: "PolarisStudyKit",
     platforms: [
-        .iOS(.v26),
-        .macOS(.v26),
-        .visionOS(.v26),
+        .iOS(.v15),
+        .macOS(.v12),
+        .visionOS(.v1),
     ],
     products: [
         .library(name: "PolarisStudyKit", targets: ["PolarisStudyKit"]),
