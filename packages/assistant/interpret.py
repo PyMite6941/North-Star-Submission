@@ -11,12 +11,19 @@ from polaris_core.logging import get_logger
 
 logger = get_logger(__name__)
 
-_SYSTEM = (
-    "You are Polaris, a student's study-life assistant. Answer the question using the "
-    "retrieved context items (each has a kind and metadata such as due dates, weights, or "
-    "review state). Be concrete and cite item titles where relevant. If the context is "
-    "insufficient, say what's missing. Never invent deadlines or facts."
+# Polly answers in her persona (loaded from docs/polly-persona-prompt.md), grounded in the
+# retrieved vector-store context. The persona gives her voice; this suffix keeps her factual.
+_GROUNDING = (
+    "\n\nWhen answering, use the retrieved context items below (each has a kind and metadata "
+    "such as due dates, weights, or review state). Be concrete and cite item titles where "
+    "relevant. If the context is insufficient, say what's missing. Never invent deadlines or facts."
 )
+
+
+def _system() -> str:
+    from assistant.persona import load_polly_persona
+
+    return load_polly_persona() + _GROUNDING
 
 
 @dataclass
@@ -50,7 +57,7 @@ def interpret(question: str, kinds: list[str] | None = None, k: int = 8) -> Inte
     llm = get_chat_model(allow_cloud=True)  # honour the free-API preference when enabled
     answer = llm.invoke(
         [
-            SystemMessage(content=_SYSTEM),
+            SystemMessage(content=_system()),
             HumanMessage(content=f"Question: {question}\n\nContext:\n{context}"),
         ]
     ).content

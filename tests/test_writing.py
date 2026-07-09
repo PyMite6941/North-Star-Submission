@@ -42,6 +42,16 @@ def test_issue_spans_are_valid():
         assert text[i.start:i.end]  # non-empty span
 
 
+def test_polly_persona_loaded_from_md():
+    """The conversational Polly (assistant) uses the persona from the markdown file."""
+    from assistant.persona import _PERSONA_FILE, load_polly_persona
+
+    assert _PERSONA_FILE.exists()  # docs/polly-persona-prompt.md
+    persona = load_polly_persona()
+    assert len(persona) > 500
+    assert "academic advisor" in persona and "Polaris" in persona  # from the md, not fallback
+
+
 def test_writing_router_registered():
     import pytest
 
