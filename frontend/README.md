@@ -1,16 +1,21 @@
 # Polaris Student — web front-end (React + Vite)
 
-A single-page React app that puts **all three Polaris components** on one branded site,
-styled to match [polarisstudent.com](https://polarisstudent.com) (see [../THEME.md](../THEME.md)).
-It talks to the Polaris **FastAPI backend** (`polaris_api`).
+A single-page React app that puts **every Polaris feature** on one branded site, styled to match
+[polarisstudent.com](https://polarisstudent.com) (see [../THEME.md](../THEME.md)). It talks to the
+Polaris **FastAPI backend** (`polaris_api`); pages are lazy-code-split, and an `useOnline` hook
+gates online-only features (Polly). **Deployed on Vercel** (auto-deploys on push to `master`).
 
 ## Pages
 
 - **Home** — branded landing (constellation hero, feature cards).
-- **Study** — ask across the 6 areas (auto-routed or pinned), flashcard decks (+ CSV export),
-  and quizzes (with reveal).
+- **Study** — ask across the 6 areas (auto-routed or pinned), flashcard decks (+ CSV export), quizzes.
+- **Recall** — SM-2 spaced-repetition decks (AI-generate or manual) with a due-card review flow.
+- **Writing** — offline grammar/style checker (issues + readability + score) **+ Polly**, the
+  online AI coach (fix/add notes with reasons + rewrite); Polly disables when offline.
 - **Notes** — upload documents (.md/.txt/.pdf/.docx/.pptx) → cited RAG answers + collection stats.
-- **Fitness** — upload activities → metrics, trends, AI growth plan; weekly schedule → `.ics` export.
+- **Planner** — import a syllabus → workload heatmap + AI weekly plan + the assistant.
+- **Focus** — pomodoro timer with a persistent streak. **Clubs** — hub with semantic search.
+- **Fitness** — upload activities → metrics, trends, AI growth plan; weekly schedule → `.ics`.
 
 ## Run it (two terminals)
 

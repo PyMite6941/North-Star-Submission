@@ -56,21 +56,33 @@ with `--area`).
 - Markdown-defined agents (analyst → planner → reviewer); `analyze --save report.md --log`.
 - **Structured weekly schedule → `.ics`** calendar (`schedule --export-ics`).
 
+### Student-life tools + Writing
+- **Recall** (`recall`) — SM-2 spaced repetition; **Syllabus** import → courses/assignments;
+  **Planner** — workload detection + AI weekly plan; **Pomodoro**, **Clubs**, **Assistant**.
+- **Writing** (`writing`) — offline grammar/style/clarity checker + readability + score, plus
+  **Polly**, the **online-only** AI coach that shows where to fix *and add* content (with reasons)
+  and rewrites. All free.
+- Shared **Chroma** vector store (`polaris_core/store.py`); drop-in **Upstash Vector** backend.
+
+### College Planner (`college_planner`)
+- Offline application tracker + 4-year course/credit map (local SQLite); deadlines → `.ics`.
+
 ### Cross-cutting
 - Shared core `polaris_core` (config, LLM factory + health check + model-tag resolution,
-  embeddings, memory, the 6 areas, UTF-8-safe console).
-- Unified **`polaris`** CLI (`study` / `rag` / `fitness` + `doctor`, `version`, `serve`).
-- **FastAPI** service (`polaris_api`, `[serve]` extra) and **Streamlit** web UI
-  (`webui/app.py`, `[ui]` extra).
-- **GitHub Actions CI** (ruff + pytest on Python 3.11/3.12/3.13); 12 smoke tests.
-- Cloud fallback optional (`GROQ_API_KEY` / `OPENROUTER_API_KEY`); default is fully local.
+  embeddings, vector store, the 6 areas, UTF-8-safe console).
+- Unified **`polaris`** CLI + **FastAPI** service (`polaris_api`) + **Streamlit** UI + a
+  **React + Vite** web app (`frontend/`).
+- **GitHub Actions CI** (ruff + pytest 3.11–3.13, Android Gradle, iOS Swift); 37 tests.
+- **Deployed**: frontend on Vercel, backend on Cloud Run (fastembed + free Groq, GCS store).
+- Cloud fallback optional (`POLARIS_ALLOW_CLOUD_FALLBACK` + a key); default is fully local.
 
 ## Platforms (downloadable-app goal)
 
-| Platform | On-device LLM | How |
+| Platform | Study features | How |
 |----------|:---:|-----|
-| Windows / macOS / Linux | ✅ full | `install/` scripts (Python venv + Ollama). |
-| Android | ⚠️ small models | `install/android-termux.sh` (Termux). |
-| iOS / iPadOS | ✅ native | `ios-native/` — Apple Foundation Models (iOS 26+); thin-client fallback in `install/ios-setup.sh`. |
+| Windows / macOS / Linux | ✅ full (AI + tools) | `install/` scripts (Python venv + Ollama), or the web app. |
+| Android | ✅ native | `android-native/` (Kotlin) — **classical algorithms, no AI, any device**. |
+| iOS / iPadOS | ✅ native | `ios-native/` (Swift) — **classical algorithms, no AI, iOS 15+**. |
+| Web | ✅ deployed | React + Vite on Vercel → Cloud Run backend. |
 
 See [install/README.md](install/README.md) for the full support matrix.

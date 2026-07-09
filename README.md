@@ -6,9 +6,11 @@
 > problem brief, track (Access & Equity), evidence of traction, and AI-usage note, mapped
 > to the published rubric.
 
-North Star is a set of four downloadable, privacy-preserving AI components that run
-entirely on a user's own device (no API keys required). Everything is orchestrated with
-LangGraph state machines and powered by a local LLM through Ollama.
+North Star (Polaris Student) is a privacy-preserving, offline-first study & fitness platform.
+The AI parts run on a local LLM through Ollama (or a free cloud model); the everyday tools run
+on **classical algorithms** so they work instantly, offline, and free — including on the native
+mobile apps, which are **fully AI-free**. It ships as a **web app** (React + Vite), a **CLI**, a
+**FastAPI** service, and **native iOS + Android** kits.
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────────┐
@@ -27,7 +29,7 @@ LangGraph state machines and powered by a local LLM through Ollama.
                 shared core: polaris_core (LLM, embeddings, config, memory)
 ```
 
-## The four components
+## Core components (AI / LangGraph)
 
 | # | Component | Folder | Library package | What it does |
 |---|-----------|--------|-----------------|--------------|
@@ -38,6 +40,38 @@ LangGraph state machines and powered by a local LLM through Ollama.
 
 > Agent prompts for the fitness pipeline live as markdown in `fitness agents for use/agent mds/`
 > — edit a file to change an agent, no code change required.
+
+## Student-life tools (algorithm-backed, offline-capable)
+
+| Tool | Package | What it does |
+|------|---------|--------------|
+| **Recall** | `recall` | Free, Quizlet-style **SM-2 spaced repetition** — AI-generate decks or add your own, review exactly what's due. |
+| **Writing** | `writing` | A grammar/style/clarity checker (wordiness, weasel words, passive voice, confusables) + Flesch–Kincaid readability + 0–100 score — **runs offline, no AI**. Plus **Polly** (online-only AI coach) that shows where to **fix and add** content, each with a reason, and can rewrite the whole piece. All free. |
+| **Syllabus** | `syllabus` | Import a syllabus (PDF/DOCX/PPTX/MD) → extracted courses, assignments, and due dates. |
+| **Planner** | `planner` | **Workload detection** (assignments bucketed by week, heavy-week flags) + an AI weekly study plan. |
+| **Pomodoro** | `pomodoro` | Focus timer with a persistent streak and focus stats. |
+| **Clubs** | `clubs` | Club hub — discover/create/join with semantic search. |
+| **Assistant** | `assistant` | A free-API interpreter that reasons across everything in the vector store. |
+
+Feature data lives in one local **Chroma** vector collection (`polaris_core/store.py`), with a
+drop-in **Upstash Vector** managed backend for scale (`POLARIS_VECTOR_BACKEND=upstash`).
+
+## Native mobile apps — algorithms, not AI
+
+`ios-native/` (Swift) and `android-native/` (Kotlin) implement the study features with
+**deterministic algorithms** — no on-device LLM, no model download, no network:
+
+| Feature | Algorithm |
+|---------|-----------|
+| Flashcards | **SM-2** spaced repetition + cloze/definition generation |
+| Quizzing | MCQ generation + **Levenshtein** grading + **Leitner** boxes |
+| Citations | Rule-table formatter (APA / MLA / Chicago) |
+| Essay / Writing | **Flesch–Kincaid** readability + rule-based grammar/style checker |
+| CV Builder | Template rendering |
+| Advisor | Rule-based deadline + spacing scheduler |
+
+The only online feature is **Polly** (the AI writing coach), which the apps call only when
+connected. See [`ios-native/README.md`](ios-native/README.md) / [`android-native/README.md`](android-native/README.md).
 
 ## The 6 areas of Polaris (Study LLM)
 
@@ -72,28 +106,24 @@ college deadlines → `.ics` for any calendar app.
 |----------|---------|
 | **Windows** | `powershell -ExecutionPolicy Bypass -File install\install.ps1` |
 | **macOS / Linux** | `./install/install.sh` |
-| **Android — on-device (high-end devices)** | Native Kotlin package — see [`android-native/`](android-native) (MediaPipe LLM Inference) |
-| **Android — Termux (broader hardware support)** | `bash install/android-termux.sh` |
-| **iOS — on-device (recommended)** | Native Swift package — see [`ios-native/`](ios-native) (Apple Foundation Models, iOS 26+) |
-| **iOS — thin client (fallback)** | `REMOTE_HOST=<desktop-ip> sh install/ios-setup.sh` |
+| **Android — native app** | Kotlin study kit — see [`android-native/`](android-native) (**algorithms, any device, no AI**) |
+| **iOS — native app** | Swift study kit — see [`ios-native/`](ios-native) (**algorithms, iOS 15+, no AI**) |
+| **Web** | Deployed on Vercel; or `cd frontend && npm run dev` — see [`frontend/README.md`](frontend/README.md) |
 
-Each installer sets up Python + the venv, installs the project, copies `.env`, and (on
-desktop) installs Ollama and pulls the models. See [`install/README.md`](install/README.md)
-for the full platform support matrix and per-OS details.
+Each desktop installer sets up Python + the venv, installs the project, copies `.env`, and
+installs Ollama + pulls the models. See [`install/README.md`](install/README.md) for the full
+platform support matrix and per-OS details.
 
 **Platform notes:**
 - **Windows / macOS / Linux** — full local LLM via Ollama, no API keys. Set
-  `POLARIS_LOW_POWER=true` and/or `POLARIS_SAVE_MEMORY=true` in `.env` on an older machine
-  to trade quality for less CPU/battery/RAM use.
-- **Android** — two tiers, same trade-off as iOS below: the **native Kotlin package in
-  [`android-native/`](android-native)** runs fully on-device via MediaPipe's LLM Inference
-  API, but per Google's own docs it's optimized for high-end devices (Pixel 8 / Galaxy
-  S23-class or newer) and doesn't reliably run on emulators. On a budget/older phone,
-  **Termux** remains the broader-hardware-support fallback (small models, RAM-limited); the
-  RAG component may need a desktop if `chromadb` won't build.
-- **iOS / iPadOS** — the Python stack can't run Ollama on-device, so the proper path is the
-  **native Swift package in [`ios-native/`](ios-native)**, which runs the 6 areas on-device with
-  Apple's Foundation Models framework (iOS 26+). The `ios-setup.sh` script is a thin-client fallback.
+  `POLARIS_LOW_POWER=true` / `POLARIS_SAVE_MEMORY=true` in `.env` on an older machine to trade
+  quality for less CPU/battery/RAM.
+- **Android & iOS** — the native kits (`android-native/` Kotlin, `ios-native/` Swift) implement
+  the study features with **classical algorithms, not AI** (SM-2, Levenshtein, Flesch–Kincaid,
+  rule-table citations). No model download, no network, runs on **any** device. The only online
+  feature is **Polly** (the AI writing coach), which the app calls only when connected.
+- **Web** — the React app is live on Vercel and talks to the Cloud Run backend (see
+  [DEPLOY.md](DEPLOY.md)).
 
 ### Manual
 
@@ -183,31 +213,30 @@ North Star Submission/
 ├── pyproject.toml          # single editable install, packages live in packages/
 ├── .env.example
 ├── packages/               # importable libraries (no spaces → clean imports)
-│   ├── polaris_core/       # shared: config, LLM, embeddings, memory, console, the 6 areas
-│   ├── study_llm/          # component 1: graph + flashcards + quiz + CLI
-│   ├── study_rag/          # component 2: graph + ingest (pdf/docx/pptx) + CLI
-│   ├── fitness_agents/     # component 3: graph + parsers + metrics + history + schedule + CLI
-│   ├── college_planner/    # component 4: models + SQLite storage + .ics export + CLI
+│   ├── polaris_core/       # shared: config, LLM, embeddings, vector store, documents, the 6 areas
+│   ├── study_llm/          # Study LLM: graph + flashcards + quiz + CV + CLI
+│   ├── study_rag/          # Study RAG: graph + ingest (pdf/docx/pptx) + CLI
+│   ├── fitness_agents/     # Fitness: graph + parsers + metrics + history + schedule + CLI
+│   ├── college_planner/    # College tracker: SQLite storage + .ics export + CLI
+│   ├── recall/             # SM-2 spaced repetition (decks/cards/review)
+│   ├── writing/            # writing checker (rules, offline) + Polly AI coach (online)
+│   ├── syllabus/           # syllabus import → courses/assignments
+│   ├── planner/            # workload detection + AI weekly plan
+│   ├── pomodoro/ clubs/    # focus stats/streak · club hub
+│   ├── assistant/          # free-API interpreter over the vector store
 │   ├── polaris_cli/        # unified `polaris` command
-│   └── polaris_api/        # FastAPI service ([serve] extra)
+│   └── polaris_api/        # FastAPI service ([serve] extra) — mounts every feature router
+├── frontend/               # React + Vite web app (deployed to Vercel)
 ├── webui/                  # Streamlit web UI ([ui] extra)
-├── tests/                  # smoke tests (run without Ollama)
-├── docs/                   # discord-announcements-sync.md, etc.
-├── .github/workflows/      # CI: ruff+pytest (3.11-3.13) + android-native (Gradle) + ios-native (Swift)
+├── tests/                  # tests (run without Ollama)
+├── docs/ · .github/workflows/   # docs · CI (ruff+pytest 3.11-3.13 + Android Gradle + iOS Swift)
 ├── install/                # cross-platform installers + support matrix
-│   ├── install.ps1         # Windows
-│   ├── install.sh          # macOS / Linux
-│   ├── android-termux.sh   # Android (Termux)
-│   └── ios-setup.sh        # iOS thin-client fallback
-├── ios-native/             # iOS ON-DEVICE app (Swift, Apple Foundation Models, iOS 26+)
-│   └── Sources/PolarisStudyKit/   # the 6 areas, on-device (mirrors study_llm)
-├── android-native/         # Android ON-DEVICE app (Kotlin, MediaPipe LLM Inference)
-│   └── polaris-study-kit/  # the 6 areas + PowerMode, on-device (mirrors study_llm)
-├── local llm model to use for studying offline/   # component 1 docs + runners + Modelfile
-├── study local notes with vector db/              # component 2 docs + sample notes + runners
-└── fitness agents for use/                        # component 3 docs + agent mds + sample data
-    ├── agent mds/          # markdown agent definitions
-    └── core programs/      # runnable entry scripts
+├── Dockerfile · DEPLOY.md  # Cloud Run backend (fastembed + Groq) + deploy guide
+├── ios-native/             # iOS app (Swift) — ALGORITHMS, not AI (SM-2, Levenshtein, Flesch…)
+├── android-native/         # Android app (Kotlin) — ALGORITHMS, not AI
+├── local llm model to use for studying offline/   # Study LLM docs + runners + Modelfile
+├── study local notes with vector db/              # Study RAG docs + sample notes + runners
+└── fitness agents for use/                        # Fitness docs + agent mds + sample data
 ```
 
 ## Documentation map
@@ -217,19 +246,23 @@ North Star Submission/
 | [SUBMISSION.md](SUBMISSION.md) | North Star Challenge problem brief, track, traction, and AI-usage note. |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design, why the layout, each component's LangGraph topology. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, conventions, how to add an area / agent / file format. |
-| [ROADMAP.md](ROADMAP.md) | Status of each component and what's next. |
+| [ROADMAP.md](ROADMAP.md) | Status of each feature and what's next. |
+| [DEPLOY.md](DEPLOY.md) | Live deployment — Cloud Run backend (fastembed + Groq, GCS-backed store) + Vercel frontend. |
 | [THEME.md](THEME.md) | Brand tokens (colors/fonts) matched to polarisstudent.com. |
 | [install/README.md](install/README.md) | Per-platform install + the support matrix. |
-| [ios-native/README.md](ios-native/README.md) | On-device iOS via Foundation Models (+ MLX / MLC / llama.cpp options). |
-| [android-native/README.md](android-native/README.md) | On-device Android via MediaPipe LLM Inference — the device-tiering trade-offs and the LiteRT-LM migration note. |
+| [frontend/README.md](frontend/README.md) | The React + Vite web app. |
+| [ios-native/README.md](ios-native/README.md) | iOS study kit — the classical algorithms (no AI). |
+| [android-native/README.md](android-native/README.md) | Android study kit — the classical algorithms (no AI). |
 | [docs/discord-announcements-sync.md](docs/discord-announcements-sync.md) | Pull the official Polaris Student `#announcements` channel into Study RAG — read-only, one-way, and exactly what has to be set up on the Discord side first. |
 
 ## Status
 
-Scaffolded and verified: all packages install (`pip install -e .`), 26 smoke tests pass, ruff
-clean, and all three LangGraph pipelines (Study LLM, Study RAG, Fitness Agents) run
-end-to-end — College Planner is a fourth, graph-free component (local storage + exports,
-no LLM call needed). Live LLM output needs Ollama running (`ollama serve` + the two
-models). CI also builds `android-native/` (Gradle) and `ios-native/` (Swift) so the
-on-device mobile packages can't silently bit-rot. See [ROADMAP.md](ROADMAP.md) for what's
-stubbed vs. complete.
+**Deployed and live**: frontend on **Vercel** (public), backend on **Google Cloud Run**
+(fastembed embeddings + free Groq chat, GCS-backed persistent vector store) — see
+[DEPLOY.md](DEPLOY.md). Frontend auto-deploys on push via GitHub Actions.
+
+Verified: all packages install (`pip install -e .`), **37 tests pass**, ruff clean, and the
+LangGraph pipelines run end-to-end. **CI is green on every push** — Python (3.11–3.13),
+Android (Gradle, incl. the Kotlin algorithm tests), and iOS (Swift). The native mobile kits are
+**AI-free** (classical algorithms). Live desktop LLM output needs Ollama running; the deployed
+backend uses the free Groq fallback (set `GROQ_API_KEY` for chat). See [ROADMAP.md](ROADMAP.md).
