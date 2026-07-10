@@ -1,7 +1,10 @@
 name: Deploy frontend (Vercel)
 
 # Auto-deploys the React frontend to Vercel on every push to master that touches it.
-# Uses the Vercel CLI + a token (repo secrets) — no Vercel GitHub App needed.
+# Requires a real Vercel ACCESS token (not a CLI session token) in the VERCEL_TOKEN secret —
+# create one at https://vercel.com/account/tokens, then: gh secret set VERCEL_TOKEN.
+# If the token is missing/invalid the job SKIPS cleanly (green) instead of failing, so a
+# missing credential never blocks anything; run `vercel --prod` from frontend/ meanwhile.
 on:
   push:
     branches: [master]
@@ -19,6 +22,7 @@ jobs:
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,9 +30,13 @@ jobs:
           node-version: 22
       - name: Install Vercel CLI
         run: npm i -g vercel
-      - name: Pull Vercel project settings
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Build
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Deploy (prebuilt) to production
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Check token, then pull/build/deploy (skips cleanly if the token is invalid)
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || ! vercel whoami --token="$VERCEL_TOKEN" >/dev/null 2>&1; then
+            echo "::warning::VERCEL_TOKEN is missing or invalid — skipping auto-deploy."
+            echo "Create a token at https://vercel.com/account/tokens and run: gh secret set VERCEL_TOKEN"
+            exit 0
+          fi
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
