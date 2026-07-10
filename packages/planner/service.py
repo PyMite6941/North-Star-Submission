@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from polaris_core.llm import get_chat_model
+from polaris_core.llm import structured
 from polaris_core.logging import get_logger
 from pydantic import BaseModel, Field
 
@@ -47,8 +47,7 @@ def make_weekly_plan(study_hours_per_day: float = 2.0) -> WeeklyStudyPlan:
     else:
         ctx_lines.append("No dated assignments found — plan general review/study habits.")
 
-    llm = get_chat_model(temperature=0.3, allow_cloud=True)
-    plan = llm.with_structured_output(WeeklyStudyPlan).invoke(
+    plan = structured(WeeklyStudyPlan, temperature=0.3, allow_cloud=True).invoke(
         [SystemMessage(content=_SYSTEM), HumanMessage(content="\n".join(ctx_lines))]
     )
     logger.info("Built weekly plan with %d blocks", len(plan.blocks))

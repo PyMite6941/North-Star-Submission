@@ -7,7 +7,7 @@ from pathlib import Path
 from langchain_core.messages import HumanMessage, SystemMessage
 from polaris_core import store
 from polaris_core.documents import read_file
-from polaris_core.llm import get_chat_model
+from polaris_core.llm import structured
 from polaris_core.logging import get_logger
 
 from syllabus.models import ExtractedSyllabus
@@ -24,8 +24,7 @@ _SYSTEM = (
 
 def import_syllabus_text(text: str) -> ExtractedSyllabus:
     """Parse raw syllabus text into a structured, persisted :class:`ExtractedSyllabus`."""
-    llm = get_chat_model(temperature=0.0, allow_cloud=True)
-    extracted = llm.with_structured_output(ExtractedSyllabus).invoke(
+    extracted = structured(ExtractedSyllabus, temperature=0.0, allow_cloud=True).invoke(
         [SystemMessage(content=_SYSTEM), HumanMessage(content=text[:12000])]
     )
     _persist(extracted)

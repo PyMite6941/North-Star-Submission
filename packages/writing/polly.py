@@ -9,7 +9,7 @@ It can also rewrite the full text. Powered by the local/free model (no paywall).
 from __future__ import annotations
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from polaris_core.llm import get_chat_model
+from polaris_core.llm import get_chat_model, structured
 from polaris_core.logging import get_logger
 from pydantic import BaseModel, Field
 
@@ -47,8 +47,7 @@ _SYSTEM = (
 
 def coach(text: str) -> CoachReport:
     """Return Polly's located fix/add feedback with reasons (structured)."""
-    llm = get_chat_model(temperature=0.2, allow_cloud=True)
-    report = llm.with_structured_output(CoachReport).invoke(
+    report = structured(CoachReport, temperature=0.2, allow_cloud=True).invoke(
         [SystemMessage(content=_SYSTEM), HumanMessage(content=text)]
     )
     logger.info("Polly produced %d notes", len(report.notes))

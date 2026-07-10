@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from polaris_core.config import get_settings
-from polaris_core.llm import get_chat_model
+from polaris_core.llm import get_chat_model, structured
 from polaris_core.logging import get_logger
 from pydantic import BaseModel, Field
 
@@ -33,14 +33,13 @@ def grade_docs(state: RagState) -> dict:
     if not docs:
         return {"relevant": False}
     context = "\n\n".join(d.page_content[:500] for d in docs)
-    llm = get_chat_model(temperature=0.0)
     prompt = (
         "Question:\n"
         f"{state['question']}\n\nRetrieved context:\n{context}\n\n"
         "Does the context contain information needed to answer the question?"
     )
     try:
-        grade = llm.with_structured_output(_Grade).invoke(
+        grade = structured(_Grade, temperature=0.0, allow_cloud=True).invoke(
             [SystemMessage(content="You grade retrieval quality."), HumanMessage(content=prompt)]
         )
         relevant = grade.relevant

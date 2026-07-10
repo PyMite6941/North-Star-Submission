@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from langchain_core.messages import SystemMessage
-from polaris_core.llm import get_chat_model
+from polaris_core.llm import get_chat_model, structured
 from polaris_core.logging import get_logger
 from polaris_core.polaris import POLARIS_AREAS, PolarisArea, area_catalog, area_info
 from pydantic import BaseModel, Field
@@ -37,10 +37,9 @@ def route(state: StudyState) -> dict:
         logger.info("Area pinned to %s (router skipped)", forced.value)
         return {"area": forced, "area_reason": "pinned by caller"}
 
-    llm = get_chat_model(temperature=0.0)
     last = state["messages"][-1]
     try:
-        decision = llm.with_structured_output(_Route).invoke(
+        decision = structured(_Route, temperature=0.0, allow_cloud=True).invoke(
             [SystemMessage(content=_ROUTER_SYSTEM), last]
         )
         area, reason = decision.area, decision.reason

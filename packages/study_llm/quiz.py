@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from polaris_core.llm import get_chat_model
+from polaris_core.llm import structured
 from polaris_core.logging import get_logger
 from pydantic import BaseModel, Field
 
@@ -46,14 +46,13 @@ class GradeResult(BaseModel):
 
 def generate_quiz(topic: str, count: int = 5, difficulty: str = "medium") -> Quiz:
     """Generate a `count`-question quiz on `topic` at the given difficulty."""
-    llm = get_chat_model(temperature=0.4)
     system = (
         "You are a quiz master. Create clear, well-formed quiz questions (mix of multiple "
         "choice and short answer) at the requested difficulty. Provide the correct answer and "
         "a brief explanation for each."
     )
     prompt = f"Create exactly {count} {difficulty}-difficulty questions on: {topic}"
-    quiz = llm.with_structured_output(Quiz).invoke(
+    quiz = structured(Quiz, temperature=0.4, allow_cloud=True).invoke(
         [SystemMessage(content=system), HumanMessage(content=prompt)]
     )
     if not quiz.topic:
@@ -64,7 +63,6 @@ def generate_quiz(topic: str, count: int = 5, difficulty: str = "medium") -> Qui
 
 def grade_quiz(quiz: Quiz, answers: list[str]) -> list[GradedAnswer]:
     """Grade a learner's answers (handles short-answer via the LLM). One call, all questions."""
-    llm = get_chat_model(temperature=0.0)
     lines = []
     for i, q in enumerate(quiz.questions):
         given = answers[i] if i < len(answers) else ""
@@ -76,7 +74,7 @@ def grade_quiz(quiz: Quiz, answers: list[str]) -> list[GradedAnswer]:
         "(accept equivalent phrasings / correct option letters). Give short feedback. "
         "Return one result per question, in order."
     )
-    result = llm.with_structured_output(GradeResult).invoke(
+    result = structured(GradeResult, temperature=0.0, allow_cloud=True).invoke(
         [SystemMessage(content=system), HumanMessage(content="\n\n".join(lines))]
     )
     # Pad/truncate defensively so callers can always zip with questions.

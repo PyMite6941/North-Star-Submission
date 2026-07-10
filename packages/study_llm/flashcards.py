@@ -14,7 +14,7 @@ from pathlib import Path
 
 import genanki
 from langchain_core.messages import HumanMessage, SystemMessage
-from polaris_core.llm import get_chat_model
+from polaris_core.llm import structured
 from polaris_core.logging import get_logger
 from pydantic import BaseModel, Field
 
@@ -57,9 +57,8 @@ _SYSTEM = (
 
 def generate_deck(topic: str, count: int = 10) -> Deck:
     """Generate a structured deck of `count` flashcards on `topic`."""
-    llm = get_chat_model(temperature=0.3)
     prompt = f"Create exactly {count} flashcards on: {topic}"
-    deck = llm.with_structured_output(Deck).invoke(
+    deck = structured(Deck, temperature=0.3, allow_cloud=True).invoke(
         [SystemMessage(content=_SYSTEM), HumanMessage(content=prompt)]
     )
     # Ensure the topic is populated even if the model omits it.
