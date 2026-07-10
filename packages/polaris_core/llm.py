@@ -128,6 +128,23 @@ def get_chat_model(
     )
 
 
+def structured(
+    schema, *, settings: Settings | None = None, allow_cloud: bool | None = None, **kwargs
+):
+    """A chat model bound to structured output, using the right method per backend.
+
+    Ollama handles the default ``json_schema`` method well; Groq / OpenAI-compatible endpoints
+    reject nested schemas that way but accept **function/tool calling** — so we pick the method
+    based on which backend :func:`get_chat_model` will actually use. Prefer this over
+    ``get_chat_model(...).with_structured_output(schema)`` for cross-provider reliability.
+    """
+    settings = settings or get_settings()
+    llm = get_chat_model(settings=settings, allow_cloud=allow_cloud, **kwargs)
+    # get_chat_model returns the Ollama model when reachable, else the cloud model.
+    method = "json_schema" if check_ollama(settings).reachable else "function_calling"
+    return llm.with_structured_output(schema, method=method)
+
+
 def _cloud_chat_model(settings: Settings, *, temperature: float, **kwargs) -> BaseChatModel:
     """OpenAI-compatible free-model fallback (Groq, else OpenRouter)."""
     try:

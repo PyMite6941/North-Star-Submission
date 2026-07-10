@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from polaris_core.llm import get_chat_model
+from polaris_core.llm import structured
 from polaris_core.logging import get_logger
 from pydantic import BaseModel, Field
 
@@ -48,10 +48,9 @@ _SYSTEM = (
 
 def generate_schedule(goal: str, context: str = "") -> WeeklySchedule:
     """Generate a typed one-week schedule for `goal`, optionally grounded in `context`."""
-    llm = get_chat_model(temperature=0.3)
     context_block = f"Context:\n{context}\n\n" if context else ""
     prompt = f"Goal: {goal}\n\n{context_block}Build the week."
-    schedule = llm.with_structured_output(WeeklySchedule).invoke(
+    schedule = structured(WeeklySchedule, temperature=0.3, allow_cloud=True).invoke(
         [SystemMessage(content=_SYSTEM), HumanMessage(content=prompt)]
     )
     if not schedule.goal:

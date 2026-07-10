@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from polaris_core.llm import get_chat_model
+from polaris_core.llm import structured
 from polaris_core.logging import get_logger
 from pydantic import BaseModel, Field
 
@@ -75,8 +75,7 @@ _SYSTEM = (
 
 def generate_resume(details: str) -> Resume:
     """Generate a structured :class:`Resume` from free-form `details` about the student."""
-    llm = get_chat_model(temperature=0.3)
-    resume = llm.with_structured_output(Resume).invoke(
+    resume = structured(Resume, temperature=0.3, allow_cloud=True).invoke(
         [SystemMessage(content=_SYSTEM), HumanMessage(content=details)]
     )
     logger.info("Generated resume for %r", resume.contact.name or "(unnamed)")
