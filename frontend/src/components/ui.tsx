@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type Health } from "../lib/api";
+import { api, humanError, type Health } from "../lib/api";
 
 /** Primary action button with a built-in loading state. */
 export function Button(props: {
@@ -19,11 +19,42 @@ export function Button(props: {
   );
 }
 
-/** Error/answer output block; renders nothing when empty. */
-export function Output({ text, error }: { text?: string; error?: string }) {
-  if (error) return <div className="output" style={{ borderColor: "var(--brand)", color: "var(--brand-dark)" }}>{error}</div>;
+/** Error/answer output block; renders nothing when empty. Errors are humanized. */
+export function Output({ text, error }: { text?: string; error?: unknown }) {
+  if (error)
+    return (
+      <div className="output" style={{ borderColor: "var(--brand)", color: "var(--brand-dark)" }}>
+        <i className="bi bi-exclamation-triangle" style={{ marginRight: 6 }} />
+        {typeof error === "string" ? error : humanError(error)}
+      </div>
+    );
   if (!text) return null;
   return <div className="output">{text}</div>;
+}
+
+/** Slim, dismissible-free banner shown site-wide while the browser is offline. */
+export function OfflineBanner() {
+  const online = useOnline();
+  if (online) return null;
+  return (
+    <div className="offline-banner" role="status">
+      <i className="bi bi-wifi-off" /> You're offline — on-device features keep working. Cloud AI
+      (Polly, chat) will resume when you reconnect.
+    </div>
+  );
+}
+
+/**
+ * Fire `onSubmit` when the user presses ⌘/Ctrl+Enter inside a field. Attach the
+ * returned handler to a textarea/input's `onKeyDown`.
+ */
+export function submitOnCmdEnter(onSubmit: () => void) {
+  return (e: React.KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      onSubmit();
+    }
+  };
 }
 
 /** Tracks online/offline state (browser connectivity). Polly features gate on this. */

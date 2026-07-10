@@ -2,19 +2,61 @@
 // proxy at /api → the backend; override with VITE_API_BASE for a deployed backend.
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api";
 
+/** Build an Error from a failed response, preferring the backend's JSON `detail`. */
+async function fail(res: Response): Promise<Error> {
+  let detail = "";
+  try {
+    const body = await res.text();
+    try {
+      detail = JSON.parse(body).detail ?? body;
+    } catch {
+      detail = body;
+    }
+  } catch {
+    /* body already consumed or empty */
+  }
+  return new ApiError(res.status, detail || res.statusText);
+}
+
+/** Error carrying the HTTP status so the UI can show a human message. */
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    detail: string,
+  ) {
+    super(detail);
+    this.name = "ApiError";
+  }
+}
+
+/** Turn any thrown value into a short, friendly sentence for the UI. */
+export function humanError(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.status === 0 || e.status >= 500)
+      return "The Polaris backend is unavailable right now. If you're offline, the on-device features still work.";
+    if (e.status === 429) return "You've hit today's AI limit — try again later.";
+    if (e.status === 404) return "That endpoint isn't available on this backend.";
+    return e.message.slice(0, 300) || `Request failed (${e.status}).`;
+  }
+  const msg = e instanceof Error ? e.message : String(e);
+  if (/failed to fetch|networkerror|load failed/i.test(msg))
+    return "Can't reach the backend. Check your connection — offline features still work.";
+  return msg.slice(0, 300);
+}
+
 async function jpost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+  if (!res.ok) throw await fail(res);
   return res.json() as Promise<T>;
 }
 
 async function jget<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) throw await fail(res);
   return res.json() as Promise<T>;
 }
 
@@ -23,7 +65,7 @@ async function upload<T>(path: string, files: File[], fields: Record<string, str
   for (const f of files) fd.append("files", f);
   for (const [k, v] of Object.entries(fields)) fd.append(k, v);
   const res = await fetch(`${BASE}${path}`, { method: "POST", body: fd });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+  if (!res.ok) throw await fail(res);
   return res.json() as Promise<T>;
 }
 

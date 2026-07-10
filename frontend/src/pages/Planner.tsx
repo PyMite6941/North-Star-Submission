@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { api, type Assignment, type WeekLoad, type WeeklyStudyPlan } from "../lib/api";
-import { Button, Output } from "../components/ui";
+import { api, humanError, type Assignment, type WeekLoad, type WeeklyStudyPlan } from "../lib/api";
+import { Button, Output, submitOnCmdEnter } from "../components/ui";
 
 export default function Planner() {
   // syllabus import
@@ -41,7 +41,7 @@ export default function Planner() {
       setFiles([]);
       refresh();
     } catch (e) {
-      setErr(String(e));
+      setErr(humanError(e));
     } finally {
       setImporting(false);
     }
@@ -54,7 +54,7 @@ export default function Planner() {
     try {
       setPlan(await api.weeklyPlan(2));
     } catch (e) {
-      setErr(String(e));
+      setErr(humanError(e));
     } finally {
       setPlanning(false);
     }
@@ -66,7 +66,7 @@ export default function Planner() {
     try {
       setAnswer((await api.assistant(q, ["assignment", "course"])).answer);
     } catch (e) {
-      setAnswer(String(e));
+      setAnswer(humanError(e));
     } finally {
       setAsking(false);
     }
@@ -175,7 +175,7 @@ export default function Planner() {
         <div className="card">
           <h3>Ask Polaris</h3>
           <p className="muted">The free-API interpreter reasons over your syllabus data.</p>
-          <textarea value={q} onChange={(e) => setQ(e.target.value)} />
+          <textarea value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={submitOnCmdEnter(ask)} />
           <div className="row" style={{ marginTop: 12 }}>
             <Button onClick={ask} loading={asking} icon="stars">
               Ask

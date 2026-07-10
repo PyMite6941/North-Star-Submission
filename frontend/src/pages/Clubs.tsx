@@ -6,6 +6,7 @@ export default function Clubs() {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
+  const [joined, setJoined] = useState<Set<string>>(new Set());
 
   const load = (query?: string) => {
     setLoading(true);
@@ -21,7 +22,10 @@ export default function Clubs() {
 
   async function join(id: string) {
     const updated = await api.joinClub(id).catch(() => null);
-    if (updated) setClubs((cs) => cs.map((c) => (c.id === id ? { ...c, members: updated.members } : c)));
+    if (updated) {
+      setClubs((cs) => cs.map((c) => (c.id === id ? { ...c, members: updated.members } : c)));
+      setJoined((j) => new Set(j).add(id));
+    }
   }
 
   return (
@@ -60,12 +64,19 @@ export default function Clubs() {
             </div>
             <h3 style={{ marginTop: 10 }}>{c.name}</h3>
             <p className="muted">{c.description}</p>
-            <Button onClick={() => join(c.id)} ghost icon="plus-circle">
-              Join
-            </Button>
+            {joined.has(c.id) ? (
+              <Button onClick={() => {}} disabled ghost icon="check-lg">
+                Joined
+              </Button>
+            ) : (
+              <Button onClick={() => join(c.id)} ghost icon="plus-circle">
+                Join
+              </Button>
+            )}
           </div>
         ))}
       </div>
+      {loading && clubs.length === 0 && <p className="muted">Loading clubs…</p>}
       {clubs.length === 0 && !loading && <p className="muted">No clubs found.</p>}
     </>
   );

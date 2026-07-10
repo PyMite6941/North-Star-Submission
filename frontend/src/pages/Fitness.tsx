@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api, type AnalyzeResult, type Schedule } from "../lib/api";
+import { api, humanError, type AnalyzeResult, type Schedule } from "../lib/api";
 import { Button, Output } from "../components/ui";
 
 export default function Fitness() {
@@ -18,7 +18,7 @@ export default function Fitness() {
     try {
       setResult(await api.fitnessAnalyzeUpload(files, goal, log));
     } catch (e) {
-      setErr(String(e));
+      setErr(humanError(e));
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function Fitness() {
               `Sessions: ${t.n_sessions}   Total: ${fmt(t.total_distance_km)} km   Last 7d: ${fmt(t.last7_distance_km)} km`,
       );
     } catch (e) {
-      setTrend(String(e));
+      setTrend(humanError(e));
     } finally {
       setTrendLoading(false);
     }
@@ -54,7 +54,7 @@ export default function Fitness() {
     try {
       setSchedule(await api.fitnessSchedule(sgGoal));
     } catch (e) {
-      setSgErr(String(e));
+      setSgErr(humanError(e));
     } finally {
       setSgLoading(false);
     }

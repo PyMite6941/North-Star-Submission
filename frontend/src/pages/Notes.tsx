@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
-import { Button, Output } from "../components/ui";
+import { api, humanError } from "../lib/api";
+import { Button, Output, submitOnCmdEnter } from "../components/ui";
 
 export default function Notes() {
   const [files, setFiles] = useState<File[]>([]);
@@ -37,7 +37,7 @@ export default function Notes() {
       setFiles([]);
       refreshStats();
     } catch (e) {
-      setIngestErr(String(e));
+      setIngestErr(humanError(e));
     } finally {
       setIngesting(false);
     }
@@ -53,7 +53,7 @@ export default function Notes() {
       setAnswer(r.answer);
       setSources(r.sources);
     } catch (e) {
-      setAskErr(String(e));
+      setAskErr(humanError(e));
     } finally {
       setAsking(false);
     }
@@ -91,7 +91,7 @@ export default function Notes() {
           <h3>Ask your notes</h3>
           <p className="muted">Answers are grounded in your documents and cite their sources.</p>
           <label className="field">Question</label>
-          <textarea value={q} onChange={(e) => setQ(e.target.value)} />
+          <textarea value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={submitOnCmdEnter(ask)} />
           <div className="row" style={{ marginTop: 12 }}>
             <Button onClick={ask} loading={asking} icon="search">
               Ask

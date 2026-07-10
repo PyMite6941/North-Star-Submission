@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type Card, type RecallDeck } from "../lib/api";
+import { api, humanError, type Card, type RecallDeck } from "../lib/api";
 import { Button, Output } from "../components/ui";
 
 const GRADES = [
@@ -34,7 +34,7 @@ export default function Recall() {
       await api.createDeck(name, withAI ? topic : undefined);
       await loadDecks();
     } catch (e) {
-      setErr(String(e));
+      setErr(humanError(e));
     } finally {
       setBusy(false);
     }
@@ -65,6 +65,23 @@ export default function Recall() {
 
   const current = queue[idx];
 
+  // Keyboard review: Space/Enter flips the card; 1–4 grade it once revealed.
+  useEffect(() => {
+    if (!activeDeck || !current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!revealed && (e.key === " " || e.key === "Enter")) {
+        e.preventDefault();
+        setRevealed(true);
+      } else if (revealed) {
+        const map: Record<string, number> = { "1": 0, "2": 2, "3": 3, "4": 5 };
+        if (e.key in map) grade(map[e.key]);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDeck, current, revealed, idx, queue]);
+
   return (
     <>
       <h2 className="section-title">Active recall</h2>
@@ -83,17 +100,22 @@ export default function Recall() {
               <div className="output" style={{ textAlign: "left" }}>{current.answer}</div>
               <p className="muted" style={{ marginTop: 14 }}>How well did you recall it?</p>
               <div className="row" style={{ justifyContent: "center" }}>
-                {GRADES.map((x) => (
+                {GRADES.map((x, i) => (
                   <button key={x.g} className="btn" style={{ background: x.color, boxShadow: "none" }} onClick={() => grade(x.g)}>
-                    {x.label}
+                    {x.label} <kbd style={{ marginLeft: 6 }}>{i + 1}</kbd>
                   </button>
                 ))}
               </div>
             </>
           ) : (
-            <Button onClick={() => setRevealed(true)} icon="eye">
-              Show answer
-            </Button>
+            <>
+              <Button onClick={() => setRevealed(true)} icon="eye">
+                Show answer
+              </Button>
+              <p className="muted" style={{ marginTop: 10, fontSize: ".8rem" }}>
+                Press <kbd>Space</kbd> to flip · <kbd>1</kbd>–<kbd>4</kbd> to grade
+              </p>
+            </>
           )}
         </div>
       ) : (

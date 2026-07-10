@@ -117,6 +117,38 @@ a:hover {
   background: var(--brand-xlight);
 }
 
+/* On phones the 8 nav links can't fit — let the row scroll horizontally
+   instead of overflowing or crushing the logo/status. */
+@media (max-width: 720px) {
+  .nav {
+    height: auto;
+  }
+  .nav .container {
+    flex-wrap: wrap;
+    gap: 8px 0;
+    padding-top: 10px;
+    padding-bottom: 6px;
+  }
+  .nav .links {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .nav .links::-webkit-scrollbar {
+    display: none;
+  }
+  .nav .links a {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .hero {
+    padding: 44px 24px;
+  }
+}
+
 .footer {
   border-top: 1px solid var(--border);
   color: var(--text-muted);
@@ -376,4 +408,60 @@ table.deck th {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+/* ---------- Offline banner ---------- */
+.offline-banner {
+  background: linear-gradient(180deg, var(--dark-2), var(--dark-3));
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.offline-banner .bi {
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+/* ---------- Keyboard hint ---------- */
+kbd {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+/* ---------- Page transition ---------- */
+.page-fade {
+  animation: page-in 0.28s ease both;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-fade,
+  .spinner {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.001ms !important;
+  }
 }

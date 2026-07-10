@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
-import { NavLink, Route, Routes } from "react-router-dom";
-import { BackendStatus } from "./components/ui";
+import { NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { BackendStatus, OfflineBanner } from "./components/ui";
 import Home from "./pages/Home";
 
 // Route-level code-splitting: each feature page is its own chunk, so the initial
@@ -26,8 +26,10 @@ const LINKS = [
 ];
 
 export default function App() {
+  const location = useLocation();
   return (
     <>
+      <OfflineBanner />
       <nav className="nav">
         <div className="container">
           <NavLink to="/" className="logo">
@@ -46,6 +48,8 @@ export default function App() {
 
       <main className="container">
         <Suspense fallback={<p className="muted" style={{ padding: 40 }}>Loading…</p>}>
+          {/* keyed on pathname so each navigation re-triggers the fade-in */}
+          <div key={location.pathname} className="page-fade">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/study" element={<Study />} />
@@ -57,6 +61,7 @@ export default function App() {
             <Route path="/clubs" element={<Clubs />} />
             <Route path="/fitness" element={<Fitness />} />
           </Routes>
+          </div>
         </Suspense>
       </main>
 

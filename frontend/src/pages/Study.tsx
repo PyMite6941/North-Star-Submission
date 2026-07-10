@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { api, type Deck, type Quiz } from "../lib/api";
-import { Button, Output } from "../components/ui";
+import { api, humanError, type Deck, type Quiz } from "../lib/api";
+import { Button, Output, submitOnCmdEnter } from "../components/ui";
 
 const AREAS = [
   { key: "", label: "Auto" },
@@ -30,7 +30,7 @@ export default function Study() {
       setAnswer(r.answer);
       setChosen(r.area);
     } catch (e) {
-      setAskErr(String(e));
+      setAskErr(humanError(e));
     } finally {
       setAskLoading(false);
     }
@@ -50,7 +50,7 @@ export default function Study() {
     try {
       setDeck(await api.flashcards(fcTopic, fcN));
     } catch (e) {
-      setFcErr(String(e));
+      setFcErr(humanError(e));
     } finally {
       setFcLoading(false);
     }
@@ -83,7 +83,7 @@ export default function Study() {
     try {
       setQuiz(await api.quiz(qzTopic, qzN, "medium"));
     } catch (e) {
-      setQzErr(String(e));
+      setQzErr(humanError(e));
     } finally {
       setQzLoading(false);
     }
@@ -107,12 +107,21 @@ export default function Study() {
             ))}
           </div>
           <label className="field">Your request</label>
-          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} />
-          <div className="row" style={{ marginTop: 12 }}>
-            <Button onClick={ask} loading={askLoading} icon="send">
-              Ask Polaris
-            </Button>
-            {chosen && !askLoading && <span className="badge">area: {chosen}</span>}
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={submitOnCmdEnter(ask)}
+          />
+          <div className="row" style={{ marginTop: 12, justifyContent: "space-between" }}>
+            <div className="row" style={{ gap: 12 }}>
+              <Button onClick={ask} loading={askLoading} icon="send">
+                Ask Polaris
+              </Button>
+              {chosen && !askLoading && <span className="badge">area: {chosen}</span>}
+            </div>
+            <span className="muted" style={{ fontSize: ".8rem" }}>
+              <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>↵</kbd>
+            </span>
           </div>
           <Output text={answer} error={askErr} />
         </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, type CoachReport, type WritingReport } from "../lib/api";
-import { Button, Output, useOnline } from "../components/ui";
+import { Button, Output, submitOnCmdEnter, useOnline } from "../components/ui";
 
 const SAMPLE =
   "In order to succeed in school, you must be very very careful with your time. " +
@@ -16,15 +16,15 @@ export default function Writing() {
   const [coach, setCoach] = useState<CoachReport | null>(null);
   const [rewrite, setRewrite] = useState("");
   const [pollyBusy, setPollyBusy] = useState(false);
-  const [err, setErr] = useState("");
+  const [err, setErr] = useState<unknown>(null);
 
   async function check() {
     setChecking(true);
-    setErr("");
+    setErr(null);
     try {
       setReport(await api.writingCheck(text));
     } catch (e) {
-      setErr(String(e));
+      setErr(e);
     } finally {
       setChecking(false);
     }
@@ -33,14 +33,14 @@ export default function Writing() {
   async function askPolly(mode: "coach" | "polish") {
     if (!online) return; // Polly is online-only
     setPollyBusy(true);
-    setErr("");
+    setErr(null);
     setCoach(null);
     setRewrite("");
     try {
       if (mode === "coach") setCoach(await api.pollyCoach(text));
       else setRewrite((await api.pollyPolish(text)).rewrite);
     } catch (e) {
-      setErr(String(e));
+      setErr(e);
     } finally {
       setPollyBusy(false);
     }
@@ -57,8 +57,14 @@ export default function Writing() {
       <div className="grid cols-2">
         <div className="card">
           <label className="field">Your text</label>
-          <textarea value={text} onChange={(e) => setText(e.target.value)} style={{ minHeight: 200 }} />
-          <div className="row" style={{ marginTop: 12 }}>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={submitOnCmdEnter(check)}
+            style={{ minHeight: 200 }}
+          />
+          <div className="row" style={{ marginTop: 12, justifyContent: "space-between" }}>
+            <div className="row" style={{ gap: 12 }}>
             <Button onClick={check} loading={checking} icon="check2-circle">
               Check (offline)
             </Button>
@@ -68,6 +74,10 @@ export default function Writing() {
             <Button onClick={() => askPolly("polish")} disabled={!online || pollyBusy} ghost icon="magic">
               Rewrite with Polly
             </Button>
+            </div>
+            <span className="muted" style={{ fontSize: ".8rem" }}>
+              <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>↵</kbd> to check
+            </span>
           </div>
           {!online && (
             <p className="muted" style={{ marginTop: 8 }}>
@@ -75,7 +85,7 @@ export default function Writing() {
               check still works.
             </p>
           )}
-          {err && <Output error={err} />}
+          {err != null && <Output error={err} />}
         </div>
 
         <div className="card">
